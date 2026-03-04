@@ -1,0 +1,25 @@
+name: Weekly Report
+
+on:
+  schedule:
+    # 09:00 horário de Brasília = 12:00 UTC (considerando UTC-3)
+    - cron: '0 12 * * 1'
+  workflow_dispatch: # permite rodar manualmente também
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run weekly report
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+        run: node scripts/weekly_report.mjs
