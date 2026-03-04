@@ -26,20 +26,18 @@ export default function AnalysisFooter() {
   const [status, setStatus] = useState("idle");
   const [analysis, setAnalysis] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [showKeyInput, setShowKeyInput] = useState(false);
+
+  const API_KEY = import.meta.env.VITE_ANTHROPIC_KEY;
 
   async function generate() {
-    if (!apiKey.trim()) { setShowKeyInput(true); return; }
     setStatus("loading");
     setErrorMsg("");
-    setShowKeyInput(false);
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey.trim(),
+          "x-api-key": API_KEY,
           "anthropic-version": "2023-06-01",
           "anthropic-dangerous-direct-browser-access": "true"
         },
@@ -57,7 +55,7 @@ export default function AnalysisFooter() {
       setAnalysis(JSON.parse(clean));
       setStatus("done");
     } catch(e) {
-      setErrorMsg(e.message || "Erro desconhecido. Verifique sua API Key.");
+      setErrorMsg(e.message || "Erro desconhecido.");
       setStatus("error");
     }
   }
@@ -74,26 +72,6 @@ export default function AnalysisFooter() {
         </button>
       </div>
 
-      {showKeyInput && (
-        <div style={{ background:"#111318", border:"1px solid #22283a", borderRadius:10, padding:20, marginBottom:20 }}>
-          <div style={{ fontSize:13, marginBottom:8, color:"#c5c9d6" }}>Cole sua API Key da Anthropic para ativar a análise de IA:</div>
-          <div style={{ display:"flex", gap:10 }}>
-            <input
-              type="password"
-              placeholder="sk-ant-..."
-              value={apiKey}
-              onChange={e => setApiKey(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && generate()}
-              style={{ flex:1, background:"#0a0c10", border:"1px solid #22283a", borderRadius:6, padding:"9px 14px", color:"#e8eaf0", fontFamily:"'DM Mono',monospace", fontSize:13, outline:"none" }}
-            />
-            <button onClick={generate} style={{ background:C.green, color:"#0a0c10", border:"none", padding:"9px 20px", borderRadius:6, fontWeight:700, cursor:"pointer", fontSize:13 }}>Confirmar</button>
-          </div>
-          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"#6b7280", marginTop:8 }}>
-            Obtenha sua key em: console.anthropic.com — A key não é salva em nenhum lugar.
-          </div>
-        </div>
-      )}
-
       {status==="loading" && (
         <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:16, padding:48, color:"#6b7280", fontFamily:"'DM Mono',monospace", fontSize:13 }}>
           <div style={{ width:20, height:20, border:"2px solid #22283a", borderTopColor:C.green, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
@@ -105,7 +83,6 @@ export default function AnalysisFooter() {
       {status==="error" && (
         <div style={{ background:"rgba(255,107,74,0.08)", border:"1px solid rgba(255,107,74,0.25)", borderRadius:8, padding:"14px 18px", color:C.orange, fontFamily:"'DM Mono',monospace", fontSize:12, marginBottom:16 }}>
           ⚠ {errorMsg}
-          <button onClick={() => setShowKeyInput(true)} style={{ marginLeft:12, background:"transparent", border:"1px solid rgba(255,107,74,0.4)", color:C.orange, padding:"3px 10px", borderRadius:4, fontSize:11, cursor:"pointer" }}>Alterar API Key</button>
         </div>
       )}
 
