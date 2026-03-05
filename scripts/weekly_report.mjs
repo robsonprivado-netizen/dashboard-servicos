@@ -1,10 +1,12 @@
 import https from "https";
+import nodemailer from "nodemailer";
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const SHEET_ID = "1-iFLORoVt9ocMaGa5tLLD7NgoU_3d3TV7KOlNUoRUuw";
 const SHEET_NAME = "Semanal";
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-const SENDGRID_KEY = process.env.SENDGRID_API_KEY;
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_PASS = process.env.GMAIL_PASS;
 const RECIPIENTS = [
   "robson.privado@madeiramadeira.com.br",
   "fernando.belleza@madeiramadeira.com.br",
@@ -20,9 +22,7 @@ function httpsPost(hostname, path, headers, body) {
     const req = https.request({ hostname, path, method: "POST", headers: { ...headers, "Content-Length": Buffer.byteLength(data) } }, (res) => {
       let raw = "";
       res.on("data", c => raw += c);
-      res.on("end", () => {
-        try { resolve(JSON.parse(raw)); } catch { resolve(raw); }
-      });
+      res.on("end", () => { try { resolve(JSON.parse(raw)); } catch { resolve(raw); } });
     });
     req.on("error", reject);
     req.write(data);
@@ -45,22 +45,44 @@ async function fetchSheetData() {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
   console.log("📊 Buscando dados do Google Sheets...");
   const csv = await httpsGet(url);
-  const lines = csv.trim().split("\n").map(l => l.split(",").map(v => v.replace(/^"|"$/g, "").trim()));
+  const lines = csv.trim().split("\n").map(l => {
+    const cols = [];
+    let cur = "", inQ = false;
+    for (const ch of l) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ""; }
+      else cur += ch;
+    }
+    cols.push(cur.trim());
+    return cols;
+  });
   console.log(`✅ ${lines.length} linhas encontradas`);
   return lines;
 }
 
 // ─── 2. PARSE DATA ────────────────────────────────────────────────────────────
 function parseData(lines) {
-  // Find header row with week indicators
-  let headerIdx = lines.findIndex(l => l.some(c => c.includes("/2026") || c.includes("/2025")));
-  if (headerIdx === -1) headerIdx = 6;
+  // Find header row (row with week labels like 1/2026)
+  let headerIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].some(c => /^\d+\/20(25|26)$/.test(c))) { headerIdx = i; break; }
+  }
+  if (headerIdx === -1) { console.log("⚠️ Header não encontrado, usando linha 6"); headerIdx = 5; }
+
   const headers = lines[headerIdx] || [];
+  console.log(`📌 Header encontrado na linha ${headerIdx}`);
 
   // Find 2026 week columns
   const weekCols = [];
-  headers.forEach((h, i) => { if (h && h.includes("/2026")) weekCols.push({ col: i, week: h }); });
-  const recentWeeks = weekCols.slice(-10);
+  headers.forEach((h, i) => { if (/^\d+\/2026$/.test(h)) weekCols.push({ col: i, week: h }); });
+  console.log(`📅 Semanas 2026 encontradas: ${weekCols.map(w => w.week).join(", ")}`);
+
+  // Take last 9 weeks with data
+  const recentWeeks = weekCols.filter(({ col }) => {
+    return lines.slice(headerIdx + 1).some(row => row[col] && row[col] !== "0" && row[col] !== "");
+  }).slice(-9);
+
+  console.log(`📅 Semanas com dados: ${recentWeeks.map(w => w.week).join(", ")}`);
 
   // Extract key metrics
   const metrics = {};
@@ -79,6 +101,7 @@ function parseData(lines) {
         const wow = row[row.length - 6] || "";
         const vsMeta = row[row.length - 4] || "";
         metrics[t] = { values: vals, wow, vsMeta };
+        console.log(`✅ Métrica encontrada: ${name}`);
       }
     });
   });
@@ -89,7 +112,7 @@ function parseData(lines) {
 // ─── 3. BUILD BUSINESS DATA STRING ───────────────────────────────────────────
 function buildDataString(metrics, recentWeeks) {
   const weeks = recentWeeks.map(w => w.week).join(", ");
-  let str = `DADOS DE PERFORMANCE — REPORT COMERCIAL SERVIÇOS 2026\nSemanas: ${weeks}\n\n`;
+  let str = `DADOS DE PERFORMANCE — REPORT COMERCIAL SERVIÇOS 2026\nSemanas analisadas: ${weeks}\n\n`;
   Object.entries(metrics).forEach(([name, data]) => {
     const vals = data.values.map(v => `${v.week}=${v.value}`).join(", ");
     str += `${name}: ${vals}`;
@@ -97,21 +120,18 @@ function buildDataString(metrics, recentWeeks) {
     if (data.vsMeta) str += ` | vs Meta: ${data.vsMeta}`;
     str += "\n";
   });
-  str += "\nCONTEXTO: Marketplace de serviços para casa. Canais: App/Site (digital), GuideShops (loja física), TDV (vendedor dedicado), Avulso (serviços standalone).";
+  str += "\nCONTEXTO: Marketplace de serviços para casa. Canais: App/Site (digital automático), GuideShops (loja física), TDV (vendedor dedicado), Avulso (serviços standalone como montagem, impermeabilização, limpeza).";
+  console.log("\n📋 Dados extraídos:\n" + str);
   return str;
 }
 
 // ─── 4. GENERATE ANALYSIS VIA CLAUDE ─────────────────────────────────────────
 async function generateAnalysis(dataString) {
-  console.log("🤖 Gerando análise com Claude...");
+  console.log("\n🤖 Gerando análise com Claude...");
   const res = await httpsPost(
     "api.anthropic.com",
     "/v1/messages",
-    {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_KEY,
-      "anthropic-version": "2023-06-01"
-    },
+    { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
     {
       model: "claude-sonnet-4-20250514",
       max_tokens: 2000,
@@ -147,8 +167,8 @@ function buildEmail(analysis) {
 
   const sectionHtml = (num, title, color, content) => `
     <div style="margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb">
-      <div style="background:${color}15;padding:12px 18px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px">
-        <span style="background:${color}25;color:${color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;font-family:monospace">${num}</span>
+      <div style="background:${color}15;padding:12px 18px;border-bottom:1px solid #e5e7eb">
+        <span style="background:${color}25;color:${color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;font-family:monospace;margin-right:8px">${num}</span>
         <span style="font-weight:700;font-size:13px;color:#111;text-transform:uppercase;letter-spacing:0.05em">${title}</span>
       </div>
       <div style="padding:16px 18px;font-size:13px;line-height:1.7;color:#374151">${content}</div>
@@ -174,7 +194,7 @@ function buildEmail(analysis) {
   const risks = analysis.risks_anomalies.map(r => `
     <div style="margin-bottom:10px;padding:12px;background:#fff7ed;border-left:3px solid #f97316;border-radius:0 6px 6px 0">
       <strong style="color:#c2410c">⚠ ${r.risco}</strong>
-      <p style="margin:4px 0 0;color:#6b7280;font-size:12px;font-family:monospace">${r.driver}</p>
+      <p style="margin:4px 0 0;color:#6b7280;font-size:12px">${r.driver}</p>
     </div>`).join("");
 
   const actions = analysis.actions.map(a => `
@@ -193,36 +213,25 @@ function buildEmail(analysis) {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9fafb;font-family:'Segoe UI',system-ui,sans-serif">
   <div style="max-width:680px;margin:0 auto;padding:24px 16px">
-
-    <!-- Header -->
     <div style="background:linear-gradient(135deg,#0a0c10,#1a1f2e);border-radius:12px;padding:28px 32px;margin-bottom:20px">
       <div style="font-size:11px;color:#00e5a0;font-family:monospace;letter-spacing:0.1em;margin-bottom:8px">✦ ANÁLISE EXECUTIVA AUTOMÁTICA</div>
       <h1 style="color:#fff;font-size:22px;font-weight:800;margin:0 0 6px;letter-spacing:-0.5px">Report Comercial Serviços</h1>
       <div style="color:#6b7280;font-size:12px;font-family:monospace">${analysis.semana_referencia} · ${today}</div>
     </div>
-
-    <!-- Summary box -->
     <div style="background:#fff;border-radius:10px;padding:20px 24px;margin-bottom:20px;border:1px solid #e5e7eb;border-left:4px solid #00e5a0">
       <div style="font-size:11px;font-weight:700;color:#00b37e;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px">01 · Executive Summary</div>
       <p style="margin:0;font-size:14px;line-height:1.7;color:#374151">${analysis.executive_summary}</p>
     </div>
-
     ${sectionHtml("02", "Key Business Drivers", "#3b82f6", drivers)}
     ${sectionHtml("03", "Structural Trends", "#8b5cf6", trends)}
     ${sectionHtml("04", "Key Risks & Anomalies", "#f97316", risks)}
     ${sectionHtml("06", "Recommended Actions", "#10b981", actions)}
-
-    <!-- Questions -->
     <div style="margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb">
       <div style="background:#eff6ff;padding:12px 18px;border-bottom:1px solid #e5e7eb">
         <span style="font-weight:700;font-size:13px;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.05em">07 · Questions for Leadership</span>
       </div>
-      <div style="padding:16px 18px">
-        <ul style="list-style:none;margin:0;padding:0">${questions}</ul>
-      </div>
+      <div style="padding:16px 18px"><ul style="list-style:none;margin:0;padding:0">${questions}</ul></div>
     </div>
-
-    <!-- Footer -->
     <div style="text-align:center;padding:16px;color:#9ca3af;font-size:11px;font-family:monospace">
       Gerado automaticamente toda segunda-feira às 09:00 · 
       <a href="https://dashboard-servicos.vercel.app" style="color:#00b37e;text-decoration:none">Ver Dashboard Completo →</a>
@@ -232,22 +241,20 @@ function buildEmail(analysis) {
 </html>`;
 }
 
-// ─── 6. SEND EMAIL VIA SENDGRID ───────────────────────────────────────────────
+// ─── 6. SEND EMAIL VIA GMAIL ──────────────────────────────────────────────────
 async function sendEmail(html, semana) {
-  console.log("📧 Enviando email...");
-  const res = await httpsPost(
-    "api.sendgrid.com",
-    "/v3/mail/send",
-    { "Content-Type": "application/json", "Authorization": `Bearer ${SENDGRID_KEY}` },
-    {
-      personalizations: [{ to: RECIPIENTS.map(email => ({ email })) }],
-      from: { email: "robson.privado@madeiramadeira.com.br", name: "Dashboard Serviços" },
-      subject: `📊 Análise Executiva — ${semana}`,
-      content: [{ type: "text/html", value: html }]
-    }
-  );
-  console.log("✅ Email enviado para", RECIPIENTS.length, "destinatários");
-  return res;
+  console.log("📧 Enviando email via Gmail...");
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: GMAIL_USER, pass: GMAIL_PASS }
+  });
+  await transporter.sendMail({
+    from: `"Dashboard Serviços" <${GMAIL_USER}>`,
+    to: RECIPIENTS.join(", "),
+    subject: `📊 Análise Executiva — ${semana}`,
+    html
+  });
+  console.log(`✅ Email enviado para ${RECIPIENTS.length} destinatários`);
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
