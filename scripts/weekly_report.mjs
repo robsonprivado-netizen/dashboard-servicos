@@ -44,22 +44,27 @@ function httpsGet(url) {
   });
 }
 
-// ─── 1. FETCH GOOGLE SHEETS ───────────────────────────────────────────────────
+// ─── 1. FETCH GOOGLE SHEETS via API ──────────────────────────────────────────
 async function fetchSheetData() {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
-  console.log("📊 Buscando dados do Google Sheets...");
-  const csv = await httpsGet(url);
-  const lines = csv.trim().split("\n").map(l => {
-    const cols = [];
-    let cur = "", inQ = false;
-    for (const ch of l) {
-      if (ch === '"') { inQ = !inQ; }
-      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ""; }
-      else cur += ch;
-    }
-    cols.push(cur.trim());
-    return cols;
+  console.log("📊 Buscando dados do Google Sheets via API...");
+  const auth = new GoogleAuth({
+    credentials: SERVICE_ACCOUNT,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"]
   });
+  const token = await auth.getAccessToken();
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}`;
+  const data = await new Promise((resolve, reject) => {
+    https.get(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    }, (res) => {
+      let raw = "";
+      res.on("data", c => raw += c);
+      res.on("end", () => { try { resolve(JSON.parse(raw)); } catch(e) { reject(e); } });
+    }).on("error", reject);
+  });
+
+  const lines = (data.values || []).map(row => row.map(v => (v || "").trim()));
   console.log(`✅ ${lines.length} linhas encontradas`);
   return lines;
 }
