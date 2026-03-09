@@ -35,7 +35,7 @@ export default function App() {
             </h1>
             <p style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"#6b7280", marginTop:6, letterSpacing:"0.05em" }}>SEMANAL · SEMANAS 1–9 · DADOS EM R$k</p>
           </div>
-          <span style={{ background:"rgba(0,229,160,0.1)", border:"1px solid rgba(0,229,160,0.3)", color:C.green, fontFamily:"'DM Mono',monospace", fontSize:11, padding:"6px 12px", borderRadius:4 }}>▲ WoW +5,3% · vs Meta +116%</span>
+          <span style={{ background:"rgba(0,229,160,0.1)", border:"1px solid rgba(0,229,160,0.3)", color:C.green, fontFamily:"'DM Mono',monospace", fontSize:11, padding:"6px 12px", borderRadius:4 }}>▲ WoW +17,6% · S10 Recorde</span>
         </div>
 
         {/* Tabs */}
@@ -49,14 +49,14 @@ export default function App() {
 
         {/* OVERVIEW */}
         <div style={s("overview")}>
-          <SectionLabel>KPIs Principais — Semana 9/2026</SectionLabel>
+          <SectionLabel>KPIs Principais — Semana 10/2026</SectionLabel>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-            <KpiCard label="GMV Total" value="R$925k" pill="▲ 5,3% WoW" pillUp color="green" sub="vs Meta +116%" />
-            <KpiCard label="GMV Automático" value="R$524k" pill="▲ 0,7% WoW" pillUp color="blue" sub="vs Meta +145%" />
-            <KpiCard label="GMV GuideShops" value="R$245k" pill="▲ 5,7% WoW" pillUp color="yellow" sub="vs Meta +103%" />
-            <KpiCard label="GMV TDV" value="R$124k" pill="▲ 7,2% WoW" pillUp color="orange" sub="vs Meta +108%" />
-            <KpiCard label="GMV Avulso" value="R$68k" pill="▼ 0,8% WoW" pillUp={false} color="green" sub="vs Meta +90%" />
-            <KpiCard label="Conversão Geral" value="21,9%" pill="▲ vs 19,1% S1" pillUp color="blue" />
+            <KpiCard label="GMV Total" value="R$1.098k" pill="▲ 17,6% WoW" pillUp color="green" sub="vs Meta +116%" />
+            <KpiCard label="GMV Automático" value="R$598k" pill="▲ 13,9% WoW" pillUp color="blue" sub="vs Meta +145%" />
+            <KpiCard label="GMV GuideShops" value="R$306k" pill="▲ 23,6% WoW" pillUp color="yellow" sub="vs Meta +103%" />
+            <KpiCard label="GMV TDV" value="R$161k" pill="▲ 25,8% WoW" pillUp color="orange" sub="vs Meta +108%" />
+            <KpiCard label="GMV Avulso" value="R$60k" pill="▼ 18,0% WoW" pillUp={false} color="green" sub="vs Meta +90%" />
+            <KpiCard label="Conversão Geral" value="23,6%" pill="▲ recorde do período" pillUp color="blue" />
           </div>
 
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:16, marginBottom:16 }}>
@@ -103,10 +103,10 @@ export default function App() {
             </Card>
             <Card title="Insights Rápidos" subtitle="Destaques da semana 9">
               {[
-                { c:C.green, icon:"🚀", title:"YoY +59%", text:"R$925k (S9/2026) vs R$582k (S9/2025)" },
-                { c:C.green, icon:"📈", title:"Conversão recorde", text:"De 19,1% (S1) → 21,9% (S9), +2,8pp" },
+                { c:C.green, icon:"🚀", title:"YoY +59%", text:"R$1.098k (S10/2026) — 2° maior do período" },
+                { c:C.green, icon:"📈", title:"Conversão recorde", text:"De 19,1% (S1) → 23,6% (S10) — recorde!" },
                 { c:C.yellow, icon:"⚠️", title:"Pico na S2", text:"R$1.037k; recuo nas semanas seguintes" },
-                { c:C.orange, icon:"💰", title:"AOV em queda", text:"De R$278 (S2) para R$247 (S9), -11%" },
+                { c:C.orange, icon:"💰", title:"AOV em queda", text:"Pico S7 (R$404) → R$240 (S10), compressão" },
               ].map((ins,i) => (
                 <div key={i} style={{ borderLeft:`3px solid ${ins.c}`, paddingLeft:12, marginBottom:14 }}>
                   <div style={{ fontSize:12, fontWeight:700, color:ins.c, marginBottom:2 }}>{ins.icon} {ins.title}</div>
@@ -120,10 +120,10 @@ export default function App() {
         {/* CANAIS */}
         <div style={s("canais")}>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-            <KpiCard label="App (S9)" value="R$257k" pill="▼ 3,5% WoW" pillUp={false} color="green" />
-            <KpiCard label="Site (S9)" value="R$256k" pill="▲ 6,2% WoW" pillUp color="blue" />
-            <KpiCard label="GuideShops (S9)" value="R$245k" pill="▲ 5,7% WoW" pillUp color="yellow" />
-            <KpiCard label="TDV (S9)" value="R$124k" pill="▲ 7,2% WoW" pillUp color="orange" />
+            <KpiCard label="App (S10)" value="R$306k" pill="▲ 19,5% WoW" pillUp pillUp={false} color="green" />
+            <KpiCard label="Site (S10)" value="R$277k" pill="▲ 6,2% WoW" pillUp color="blue" />
+            <KpiCard label="GuideShops (S9)" value="R$306k" pill="▲ 23,6% WoW" pillUp color="yellow" />
+            <KpiCard label="TDV (S9)" value="R$161k" pill="▲ 25,8% WoW" pillUp color="orange" />
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
             <Card title="App vs Site" subtitle="R$k">
@@ -157,13 +157,13 @@ export default function App() {
                 </thead>
                 <tbody>
                   {[
-                    { name:"Total", d:RAW.gmvTotal, wow:"+5,3%", up:true },
-                    { name:"Automático", d:RAW.gmvAuto, wow:"+0,7%", up:true },
-                    { name:"App", d:RAW.gmvApp, wow:"-3,5%", up:false },
-                    { name:"Site", d:RAW.gmvSite, wow:"+6,2%", up:true },
-                    { name:"GuideShops", d:RAW.gmvGS, wow:"+5,7%", up:true },
-                    { name:"TDV", d:RAW.gmvTDV, wow:"+7,2%", up:true },
-                    { name:"Avulso", d:RAW.gmvAvulso, wow:"-0,8%", up:false },
+                    { name:"Total", d:RAW.gmvTotal, wow:"+17,6%", up:true },
+                    { name:"Automático", d:RAW.gmvAuto, wow:"+13,9%", up:true },
+                    { name:"App", d:RAW.gmvApp, wow:"+19,5%", up:true },
+                    { name:"Site", d:RAW.gmvSite, wow:"+7,3%", up:true },
+                    { name:"GuideShops", d:RAW.gmvGS, wow:"+23,6%", up:true },
+                    { name:"TDV", d:RAW.gmvTDV, wow:"+25,8%", up:true },
+                    { name:"Avulso", d:RAW.gmvAvulso, wow:"-18,0%", up:false },
                   ].map((row,i) => (
                     <tr key={i}>
                       <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", fontWeight:i===0?700:400 }}>{row.name}</td>
@@ -181,10 +181,10 @@ export default function App() {
         {/* CONVERSÃO & AOV */}
         <div style={s("conversao")}>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-            <KpiCard label="Conversão S9" value="21,9%" pill="▲ vs 19,1% S1" pillUp color="green" />
-            <KpiCard label="AOV Total S9" value="R$247" pill="▼ vs R$278 pico" pillUp={false} color="blue" />
-            <KpiCard label="AOV TDV S9" value="R$278" sub="maior ticket" color="yellow" />
-            <KpiCard label="AOV Avulso S9" value="R$276" pill="▲ vs R$223 S1" pillUp color="orange" />
+            <KpiCard label="Conversão S9" value="23,6%" pill="▲ recorde do período" pillUp color="green" />
+            <KpiCard label="AOV Total S10" value="R$240" pill="▼ vs R$278 pico" pillUp={false} color="blue" />
+            <KpiCard label="AOV TDV S10" value="R$264" sub="maior ticket" color="yellow" />
+            <KpiCard label="AOV Avulso S10" value="R$236" pill="▲ vs R$223 S1" pillUp color="orange" />
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
             <Card title="Taxa de Conversão Geral" subtitle="% Bundle · S1–S9">
@@ -226,9 +226,9 @@ export default function App() {
         {/* SESSÕES */}
         <div style={s("sessoes")}>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-            <KpiCard label="Sessões App S9" value="1,83M" pill="▲ 248% vs 2025" pillUp color="green" />
-            <KpiCard label="Sessões Site S9" value="2,82M" pill="▲ 257% vs 2025" pillUp color="blue" />
-            <KpiCard label="Total S9" value="4,66M" pill="▲ 253% vs 2025" pillUp color="yellow" />
+            <KpiCard label="Sessões App S10" value="1,85M" pill="▲ 248% vs 2025" pillUp color="green" />
+            <KpiCard label="Sessões Site S10" value="3,12M" pill="▲ 257% vs 2025" pillUp color="blue" />
+            <KpiCard label="Total S10" value="4,97M" pill="▲ 253% vs 2025" pillUp color="yellow" />
             <KpiCard label="Split App/Site" value="39/61" sub="% de sessões" color="orange" />
           </div>
           <Card title="Sessões App vs Site por Semana" subtitle="Milhões">
