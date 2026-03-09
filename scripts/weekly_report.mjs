@@ -53,7 +53,7 @@ async function fetchSheetData() {
   });
   const token = await auth.getAccessToken();
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME + '!A1:DZ300')}`;
   const data = await new Promise((resolve, reject) => {
     https.get(url, {
       headers: { Authorization: `Bearer ${token}` }
