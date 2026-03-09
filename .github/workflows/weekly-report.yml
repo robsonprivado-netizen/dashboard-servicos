@@ -18,12 +18,12 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install nodemailer
+        run: npm install nodemailer @google-analytics/data google-auth-library
 
       - name: Run weekly report
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node scripts/weekly_report.mjs
