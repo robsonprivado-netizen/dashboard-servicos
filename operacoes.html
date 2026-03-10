@@ -852,8 +852,8 @@ function renderOverview() {
   // Build unified week list merging both sources
   const allWeeksSet = new Set([...(bd?.weeks||[]), ...(ad?.weeks||[])]);
   const weeks = [...allWeeksSet].sort();
-  if (!ST.selWeeks.overview && weeks.length) ST.selWeeks.overview = weeks.length-1;
-  const selIdx = Math.min(ST.selWeeks.overview??weeks.length-1, weeks.length-1);
+  if (ST.selWeeks.overview === undefined && weeks.length) ST.selWeeks.overview = weeks.length-1;
+  const selIdx = Math.min(ST.selWeeks.overview ?? weeks.length-1, weeks.length-1);
   const selWeek = weeks[selIdx];
 
   if (ST.data['sb-user-name']) document.getElementById('sb-user-name').textContent = ST.data['sb-user-name'];
@@ -863,11 +863,21 @@ function renderOverview() {
     : 'Aguardando dados...';
   weekTabs('ov-weeks', weeks, selIdx, 'overview');
 
-  const bG = bd?.byEntity?.Geral?.[selWeek]||{};
-  const aG = ad?.byEntity?.Geral?.[selWeek]||{};
+  // For each source, use selWeek if available, else fall back to its own last week
+  const bdWeek = bd?.byEntity?.Geral?.[selWeek] ? selWeek
+    : bd?.weeks?.[bd.weeks.length-1] || selWeek;
+  const adWeek = ad?.byEntity?.Geral?.[selWeek] ? selWeek
+    : ad?.weeks?.[ad.weeks.length-1] || selWeek;
+
+  const bG = bd?.byEntity?.Geral?.[bdWeek]||{};
+  const aG = ad?.byEntity?.Geral?.[adWeek]||{};
   const prevWeek = selIdx > 0 ? weeks[selIdx-1] : null;
-  const bGp = prevWeek ? bd?.byEntity?.Geral?.[prevWeek]||{} : {};
-  const aGp = prevWeek ? ad?.byEntity?.Geral?.[prevWeek]||{} : {};
+  const bdPrevWeek = prevWeek && bd?.byEntity?.Geral?.[prevWeek] ? prevWeek
+    : bd?.weeks?.[Math.max(0, (bd?.weeks?.indexOf(bdWeek)||0)-1)] || null;
+  const adPrevWeek = prevWeek && ad?.byEntity?.Geral?.[prevWeek] ? prevWeek
+    : ad?.weeks?.[Math.max(0, (ad?.weeks?.indexOf(adWeek)||0)-1)] || null;
+  const bGp = bdPrevWeek ? bd?.byEntity?.Geral?.[bdPrevWeek]||{} : {};
+  const aGp = adPrevWeek ? ad?.byEntity?.Geral?.[adPrevWeek]||{} : {};
 
   document.getElementById('ov-kpis').innerHTML =
     kpiCard('Bundle CSAT', bG.csat??null, null, META.csat, false, 'blue', bG.csat&&bGp.csat?{v:bG.csat-bGp.csat}:null) +
