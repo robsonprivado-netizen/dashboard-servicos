@@ -15,10 +15,10 @@ async function main(){
     const r=await post("api.anthropic.com","/v1/messages",{"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"},{model:"claude-sonnet-4-20250514",max_tokens:1000,system:'Responda SOMENTE JSON sem markdown: {"semana_referencia":"string","executive_summary":"string","actions":[{"area":"string","acao":"string"}]}',messages:[{role:"user",content:DATA}]});
     const a=JSON.parse(r.content.map(b=>b.text||"").join("").replace(/```json|```/g,"").trim());
     console.log("✅ Analise:",a.semana_referencia);
-    const t=require("nodemailer").createTransport||nodemailer.createTransport;
     const tr=nodemailer.createTransport({service:"gmail",auth:{user:GMAIL_USER,pass:GMAIL_PASS}});
     await tr.sendMail({from:`"Dashboard" <${GMAIL_USER}>`,to:RECIPIENTS.join(","),subject:`📊 ${a.semana_referencia}`,html:`<h2>${a.semana_referencia}</h2><p>${a.executive_summary}</p>`});
     console.log("✅ Email enviado!");
   }catch(e){console.error("❌",e.message);process.exit(1)}
 }
-main();0
+main();
+
