@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operações — Madeira Serviços</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root {
+  --bg: #0c0e13;
+  --s1: #11141b;
+  --s2: #171b24;
+  --s3: #1e232f;
+  --border: #252b3a;
+  --green: #00d68f;
+  --blue: #4d9fff;
+  --orange: #ff8c42;
+  --red: #ff4757;
+  --yellow: #ffc107;
+  --purple: #a855f7;
+  --text: #e4e8f0;
+  --muted: #5a6278;
+  --muted2: #8892a4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,214,143,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,214,143,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+
+/* LOGIN SCREEN */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+.login-box{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:40px 48px;text-align:center;max-width:420px;width:90%}
+.login-logo{width:52px;height:52px;background:var(--green);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px}
+.login-title{font-size:22px;font-weight:800;margin-bottom:6px}
+.login-sub{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:28px}
+.login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 20px;background:var(--green);color:var(--bg);border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.login-btn:hover{opacity:.9}
+.login-btn svg{width:18px;height:18px;flex-shrink:0}
+.login-status{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:12px}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh;position:relative;z-index:1}
+.sidebar{width:220px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{flex:1;min-width:0;padding:28px 28px 40px}
+
+/* SIDEBAR */
+.sb-header{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.sb-logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.sb-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.sb-brand{font-size:13px;font-weight:700;color:var(--text);line-height:1.2}
+.sb-sub{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:2px}
+.sb-user{padding:10px 12px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:6px}
+.sb-user-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-logout{background:none;border:none;color:var(--muted);cursor:pointer;font-size:10px;font-family:'DM Mono',monospace;padding:2px 6px;border-radius:4px;transition:color .15s}
+.sb-logout:hover{color:var(--red)}
+.sb-section{padding:10px 12px 4px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-top:4px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:8px 12px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:all .15s;font-size:12px;font-weight:600;color:var(--muted2);border:1px solid transparent}
+.sb-item:hover{background:var(--s2);color:var(--text)}
+.sb-item.active{background:rgba(0,214,143,.1);color:var(--green);border-color:rgba(0,214,143,.2)}
+.sb-item .icon{font-size:14px;width:18px;text-align:center}
+.sb-item .badge{margin-left:auto;font-size:9px;background:var(--red);color:#fff;padding:1px 5px;border-radius:4px;font-family:'DM Mono',monospace;display:none}
+.sb-divider{height:1px;background:var(--border);margin:8px 12px}
+.sb-refresh{margin:8px 12px;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:11px;cursor:pointer;transition:all .15s;font-family:'Syne',sans-serif;width:calc(100% - 24px);display:flex;align-items:center;justify-content:center;gap:6px}
+.sb-refresh:hover{border-color:var(--green);color:var(--green)}
+.sb-last-update{font-size:9px;color:var(--muted);text-align:center;font-family:'DM Mono',monospace;padding:0 12px 8px}
+
+/* LOADING */
+#loading-overlay{position:fixed;inset:0;background:rgba(12,14,19,.85);z-index:90;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#loading-overlay.show{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+.loading-text{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
+
+/* PAGE HEADER */
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-subtitle{font-size:11px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace}
+.week-selector{display:flex;gap:4px;flex-wrap:wrap}
+.week-btn{font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.week-btn:hover{border-color:var(--green);color:var(--green)}
+.week-btn.active{background:var(--green);color:var(--bg);border-color:var(--green);font-weight:500}
+
+/* KPI */
+.kpi-row{display:grid;gap:12px;margin-bottom:20px}
+.kpi-row.cols-3{grid-template-columns:repeat(3,1fr)}
+.kpi-row.cols-4{grid-template-columns:repeat(4,1fr)}
+.kpi-row.cols-5{grid-template-columns:repeat(5,1fr)}
+.kpi{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;transition:transform .2s}
+.kpi:hover{transform:translateY(-1px)}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);border-radius:12px 12px 0 0}
+.kpi.warn::after{background:var(--yellow)}
+.kpi.danger::after{background:var(--red)}
+.kpi.blue::after{background:var(--blue)}
+.kpi.purple::after{background:var(--purple)}
+.kpi.orange::after{background:var(--orange)}
+.kpi-label{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:28px;font-weight:800;color:var(--green);line-height:1}
+.kpi.warn .kpi-value{color:var(--yellow)}
+.kpi.danger .kpi-value{color:var(--red)}
+.kpi.blue .kpi-value{color:var(--blue)}
+.kpi.purple .kpi-value{color:var(--purple)}
+.kpi.orange .kpi-value{color:var(--orange)}
+.kpi-meta{margin-top:8px}
+.kpi-tag{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(0,214,143,.1);color:var(--green);display:inline-block}
+.kpi.warn .kpi-tag{background:rgba(255,193,7,.1);color:var(--yellow)}
+.kpi.danger .kpi-tag{background:rgba(255,71,87,.1);color:var(--red)}
+.kpi.blue .kpi-tag{background:rgba(77,159,255,.1);color:var(--blue)}
+.kpi.orange .kpi-tag{background:rgba(255,140,66,.1);color:var(--orange)}
+
+/* CARDS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.grid-half{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:18px}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title .dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
+.card-title .dot.blue{background:var(--blue)}
+.card-title .dot.orange{background:var(--orange)}
+.chart-wrap{position:relative}
+.chart-wrap.h200{height:200px}
+.chart-wrap.h240{height:240px}
+.chart-wrap.h220{height:220px}
+
+/* JORNADA TABS */
+.jornada-tabs{display:flex;gap:8px;margin-bottom:20px}
+.j-tab{padding:7px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);cursor:pointer;font-family:'Syne',sans-serif;font-size:12px;font-weight:600;transition:all .15s}
+.j-tab:hover{border-color:var(--blue);color:var(--blue)}
+.j-tab.bundle.active{background:var(--green);border-color:var(--green);color:var(--bg)}
+.j-tab.avulso.active{background:var(--orange);border-color:var(--orange);color:#fff}
+
+/* UF GRID */
+.uf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:16px}
+.uf-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:14px;transition:all .2s}
+.uf-card:hover{border-color:rgba(0,214,143,.2);background:var(--s2)}
+.uf-card.alert{border-color:rgba(255,71,87,.25)}
+.uf-card.warn{border-color:rgba(255,193,7,.25)}
+.uf-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.uf-name{font-size:18px;font-weight:800}
+.uf-badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:10px;letter-spacing:.5px}
+.uf-badge.ok{background:rgba(0,214,143,.1);color:var(--green)}
+.uf-badge.warn{background:rgba(255,193,7,.1);color:var(--yellow)}
+.uf-badge.alert{background:rgba(255,71,87,.1);color:var(--red)}
+.uf-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.uf-m-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:3px}
+.uf-m-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500}
+.uf-m-value.good{color:var(--green)}
+.uf-m-value.warn{color:var(--yellow)}
+.uf-m-value.bad{color:var(--red)}
+.mini-bar{height:2px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden}
+.mini-bar-fill{height:100%;border-radius:2px}
+
+/* DESVIOS */
+.desvios-list{display:flex;flex-direction:column;gap:8px}
+.desvio{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--s2);border-radius:8px;border-left:3px solid var(--red)}
+.desvio.warn{border-left-color:var(--yellow)}
+.desvio-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.desvio-body{flex:1;min-width:0}
+.desvio-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.desvio-desc{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.desvio-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--red);flex-shrink:0}
+.desvio.warn .desvio-val{color:var(--yellow)}
+
+/* CITY TABLE */
+.search-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.search-input{flex:1;min-width:160px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;font-family:'Syne',sans-serif;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--green)}
+.search-input::placeholder{color:var(--muted)}
+.filter-btn{padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'Syne',sans-serif}
+.filter-btn:hover,.filter-btn.active{border-color:var(--green);color:var(--green);background:rgba(0,214,143,.08)}
+.table-scroll{max-height:440px;overflow-y:auto;border-radius:8px;border:1px solid var(--border)}
+.city-table{width:100%;border-collapse:collapse;font-size:12px}
+.city-table th{background:var(--s2);padding:8px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);white-space:nowrap;position:sticky;top:0;z-index:1}
+.city-table td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.city-table tr:hover td{background:var(--s2)}
+.city-table .city-name{font-weight:700}
+.uf-tag{display:inline-block;padding:1px 6px;border-radius:3px;background:var(--s3);font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2)}
+.num{font-family:'DM Mono',monospace;text-align:right}
+.num.good{color:var(--green)}
+.num.warn{color:var(--yellow)}
+.num.bad{color:var(--red)}
+.num.neutral{color:var(--muted2)}
+
+/* SEC LABEL */
+.sec-label{font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--muted);margin-bottom:12px;margin-top:20px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.no-data{text-align:center;padding:40px;color:var(--muted);font-size:13px;font-family:'DM Mono',monospace}
+.no-data .icon{font-size:32px;margin-bottom:10px;display:block}
+
+footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .35s ease both}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🌲</div>
+    <div class="login-title">Madeira Serviços</div>
+    <div class="login-sub">Dashboard · Operações</div>
+    <button class="login-btn" onclick="handleLogin()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      Entrar com Google
+    </button>
+    <div class="login-status" id="login-status">Clique para autenticar com sua conta Google</div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Carregando dados...</div>
+</div>
+
+<!-- APP -->
+<div class="layout" id="app" style="display:none">
+  <nav class="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo">
+        <div class="sb-icon">🌲</div>
+        <div><div class="sb-brand">Madeira Serviços</div><div class="sb-sub">Operações</div></div>
+      </div>
+    </div>
+    <div class="sb-user">
+      <span class="sb-user-name" id="sb-user-name">—</span>
+      <button class="sb-logout" onclick="handleLogout()">sair</button>
+    </div>
+
+    <div class="sb-section">Visão Geral</div>
+    <div class="sb-item active" onclick="showPage('overview',this)"><span class="icon">📊</span> Overview</div>
+    <div class="sb-item" onclick="showPage('alertas',this)"><span class="icon">⚡</span> Alertas <span class="badge" id="badge-alertas">0</span></div>
+
+    <div class="sb-divider"></div>
+    <div class="sb-section">Por Jornada</div>
+    <div class="sb-item" onclick="showPage('bundle',this)"><span class="icon">📦</span> Bundle</div>
+    <div class="sb-item" onclick="showPage('avulso',this)"><span class="icon">🛠</span> Avulso</div>
+
+    <div class="sb-divider"></div>
+    <div class="sb-section">Zoom Estados</div>
+    <div class="sb-item" onclick="showPage('sp',this)"><span class="icon">🏙</span> SP</div>
+    <div class="sb-item" onclick="showPage('rj',this)"><span class="icon">🏖</span> RJ</div>
+    <div class="sb-item" onclick="showPage('mg',this)"><span class="icon">⛰</span> MG</div>
+
+    <div class="sb-divider"></div>
+    <div class="sb-section">Operacional</div>
+    <div class="sb-item" onclick="showPage('cidades',this)"><span class="icon">📍</span> Cidades</div>
+
+    <div class="sb-divider"></div>
+    <button class="sb-refresh" onclick="loadAllSheets()">🔄 Atualizar dados</button>
+    <div class="sb-last-update" id="sb-last-update"></div>
+  </nav>
+
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div id="page-overview" class="page active">
+      <div class="page-header">
+        <div><div class="page-title">Overview Operacional</div><div class="page-subtitle" id="ov-subtitle">Carregando...</div></div>
+        <div class="week-selector" id="ov-weeks"></div>
+      </div>
+      <div class="kpi-row cols-4" id="ov-kpis"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot blue"></span> Evolução CSAT — Bundle vs Avulso</div><div class="chart-wrap h240"><canvas id="ov-csat-chart"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot orange"></span> Evolução NPS — Bundle vs Avulso</div><div class="chart-wrap h240"><canvas id="ov-nps-chart"></canvas></div></div>
+      </div>
+      <div class="grid-half">
+        <div class="card"><div class="card-title"><span class="dot"></span> CSAT por UF — Semana Atual (Bundle)</div><div class="chart-wrap h200"><canvas id="ov-uf-csat"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot orange"></span> Top Alertas</div><div class="desvios-list" id="ov-alertas-mini"></div></div>
+      </div>
+    </div>
+
+    <!-- ALERTAS -->
+    <div id="page-alertas" class="page">
+      <div class="page-header"><div><div class="page-title">Central de Alertas</div><div class="page-subtitle">Desvios vs metas · CSAT ≥ 4,7 · NPS ≥ 70% · Open &lt; 10%</div></div></div>
+      <div class="desvios-list" id="alertas-full"></div>
+    </div>
+
+    <!-- BUNDLE -->
+    <div id="page-bundle" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Bundle <span style="color:var(--green);font-size:14px">Montagem</span></div><div class="page-subtitle">Serviços vendidos junto com o produto</div></div>
+        <div class="week-selector" id="bundle-weeks"></div>
+      </div>
+      <div class="kpi-row cols-4" id="bundle-kpis"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot"></span> CSAT Semanal</div><div class="chart-wrap h200"><canvas id="bundle-csat-trend"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot blue"></span> NPS Semanal</div><div class="chart-wrap h200"><canvas id="bundle-nps-trend"></canvas></div></div>
+      </div>
+      <div class="sec-label">Desempenho por UF</div>
+      <div class="uf-grid" id="bundle-uf-grid"></div>
+    </div>
+
+    <!-- AVULSO -->
+    <div id="page-avulso" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Avulso <span style="color:var(--orange);font-size:14px">Serviços</span></div><div class="page-subtitle">Serviços vendidos separadamente</div></div>
+        <div class="week-selector" id="avulso-weeks"></div>
+      </div>
+      <div class="kpi-row cols-4" id="avulso-kpis"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot orange"></span> CSAT Semanal</div><div class="chart-wrap h200"><canvas id="avulso-csat-trend"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot orange"></span> NPS Semanal</div><div class="chart-wrap h200"><canvas id="avulso-nps-trend"></canvas></div></div>
+      </div>
+      <div class="sec-label">Desempenho por UF</div>
+      <div class="uf-grid" id="avulso-uf-grid"></div>
+    </div>
+
+    <!-- SP -->
+    <div id="page-sp" class="page">
+      <div class="page-header">
+        <div><div class="page-title">São Paulo</div><div class="page-subtitle">Principais cidades · Bundle &amp; Avulso</div></div>
+        <div class="week-selector" id="sp-weeks"></div>
+      </div>
+      <div class="jornada-tabs">
+        <button class="j-tab bundle active" onclick="switchJornada('sp','bundle',this)">📦 Bundle</button>
+        <button class="j-tab avulso" onclick="switchJornada('sp','avulso',this)">🛠 Avulso</button>
+      </div>
+      <div class="kpi-row cols-4" id="sp-kpis"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot"></span> CSAT por Cidade</div><div class="chart-wrap h220"><canvas id="sp-csat-bar"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot blue"></span> NPS por Cidade</div><div class="chart-wrap h220"><canvas id="sp-nps-bar"></canvas></div></div>
+      </div>
+      <div class="sec-label">Cidades de SP</div>
+      <div class="uf-grid" id="sp-cidade-grid"></div>
+    </div>
+
+    <!-- RJ -->
+    <div id="page-rj" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Rio de Janeiro</div><div class="page-subtitle">Principais cidades · Bundle</div></div>
+        <div class="week-selector" id="rj-weeks"></div>
+      </div>
+      <div class="kpi-row cols-4" id="rj-kpis"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot"></span> CSAT por Cidade</div><div class="chart-wrap h220"><canvas id="rj-csat-bar"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot blue"></span> NPS por Cidade</div><div class="chart-wrap h220"><canvas id="rj-nps-bar"></canvas></div></div>
+      </div>
+      <div class="sec-label">Cidades do RJ</div>
+      <div class="uf-grid" id="rj-cidade-grid"></div>
+    </div>
+
+    <!-- MG -->
+    <div id="page-mg" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Minas Gerais</div><div class="page-subtitle">Principais cidades · Bundle</div></div>
+        <div class="week-selector" id="mg-weeks"></div>
+      </div>
+      <div class="kpi-row cols-4" id="mg-kpis"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot"></span> CSAT por Cidade</div><div class="chart-wrap h220"><canvas id="mg-csat-bar"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot blue"></span> NPS por Cidade</div><div class="chart-wrap h220"><canvas id="mg-nps-bar"></canvas></div></div>
+      </div>
+      <div class="sec-label">Cidades de MG</div>
+      <div class="uf-grid" id="mg-cidade-grid"></div>
+    </div>
+
+    <!-- CIDADES -->
+    <div id="page-cidades" class="page">
+      <div class="page-header"><div><div class="page-title">Cidades — Montagem</div><div class="page-subtitle">Operacional por cidade · D-30</div></div></div>
+      <div class="kpi-row cols-5" id="cidades-kpis"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot orange"></span> Taxa Open Incidência — Top cidades</div><div class="chart-wrap h200"><canvas id="cidades-open-chart"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot blue"></span> No Show Incidência — Top cidades</div><div class="chart-wrap h200"><canvas id="cidades-noshow-chart"></canvas></div></div>
+      </div>
+      <div class="sec-label">Tabela completa</div>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="cidade-search" placeholder="Filtrar cidade ou UF..." oninput="filterCidades()">
+        <button class="filter-btn active" onclick="setRiskFilter('all',this)">Todas</button>
+        <button class="filter-btn" onclick="setRiskFilter('crit',this)">🔴 Crítico</button>
+        <button class="filter-btn" onclick="setRiskFilter('alto',this)">🟠 Alto</button>
+        <button class="filter-btn" onclick="setRiskFilter('medio',this)">🟡 Médio</button>
+        <button class="filter-btn" onclick="setRiskFilter('baixo',this)">🟢 Baixo</button>
+      </div>
+      <div class="table-scroll">
+        <table class="city-table">
+          <thead><tr>
+            <th>Cidade</th><th>UF</th><th>Risco</th><th>PROs</th><th>Ativos</th>
+            <th>Serv. D-30</th><th>Job/PRO</th><th>Open Inc.</th><th>Open Real</th>
+            <th>NoShow Inc.</th><th>NoShow Real</th><th>Resolução</th><th>CSAT</th><th>NPS</th>
+          </tr></thead>
+          <tbody id="cidades-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer>
+      <span>Madeira Serviços · Operações · CSAT ≥ 4,7 · NPS ≥ 70% · Open &lt; 10%</span>
+      <span id="footer-info"></span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
+const CLIENT_ID = '425783911667-p3bia1nam87dsar3kutk9sq7u23prnku.apps.googleusercontent.com';
+const SHEET_ID  = '1qJ7w42YZ5f-aoZlQwihqpIkS-ACIeruoRUdheuJRayY';
+const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+const META      = { csat: 4.7, nps: 70, open: 10 };
+const C         = { green:'#00d68f', blue:'#4d9fff', orange:'#ff8c42', red:'#ff4757', yellow:'#ffc107', border:'#252b3a', bg:'#0c0e13', muted:'#5a6278' };
+
+const SHEETS = {
+  bundle:     'UF Bundle - CSAT/NPS',
+  avulso:     'UF Avulso - CSAT/NPS',
+  spBundle:   'SP - Bundle',
+  spAvulso:   'SP - Avulso',
+  rj:         'RJ - CSAT/NPS',
+  mg:         'MG - CSAT/NPS',
+  cidades:    'Cidades - Montagem',
+};
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+const ST = {
+  token: null,
+  data: {},
+  selWeeks: {},
+  spJornada: 'bundle',
+  cityData: [],
+  cityRiskFilter: 'all',
+  charts: {},
+};
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+let tokenClient;
+
+window.onload = () => {
+  const saved = sessionStorage.getItem('ms_ops_token');
+  if (saved) {
+    ST.token = saved;
+    showApp();
+    loadAllSheets();
+  }
+};
+
+function handleLogin() {
+  document.getElementById('login-status').textContent = 'Iniciando autenticação...';
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { document.getElementById('login-status').textContent = 'Erro: ' + resp.error; return; }
+      ST.token = resp.access_token;
+      sessionStorage.setItem('ms_ops_token', ST.token);
+      showApp();
+      loadAllSheets();
+    },
+  });
+  tokenClient.requestAccessToken();
+}
+
+function handleLogout() {
+  sessionStorage.removeItem('ms_ops_token');
+  ST.token = null;
+  ST.data = {};
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+// ─────────────────────────────────────────────
+// SHEETS API
+// ─────────────────────────────────────────────
+async function fetchSheet(sheetName) {
+  const range = encodeURIComponent(sheetName);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}`;
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + ST.token } });
+  if (!res.ok) throw new Error(`Erro ao carregar aba "${sheetName}": ${res.status}`);
+  const json = await res.json();
+  return json.values || [];
+}
+
+async function loadAllSheets() {
+  showLoading('Buscando dados da planilha...');
+  try {
+    const entries = Object.entries(SHEETS);
+    for (let i = 0; i < entries.length; i++) {
+      const [key, name] = entries[i];
+      setLoadingText(`Carregando: ${name} (${i+1}/${entries.length})`);
+      try {
+        const rows = await fetchSheet(name);
+        if (key === 'cidades') {
+          ST.data[key] = parseCidades(rows);
+        } else {
+          ST.data[key] = parseWeekly(rows);
+        }
+      } catch(e) { console.warn(e); }
+    }
+    const now = new Date();
+    document.getElementById('sb-last-update').textContent = 'Atualizado ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('footer-info').textContent = now.toLocaleDateString('pt-BR');
+    hideLoading();
+    renderPage('overview');
+    buildAlerts();
+  } catch(e) {
+    hideLoading();
+    if (e.message.includes('401')) {
+      alert('Sessão expirada. Faça login novamente.');
+      handleLogout();
+    } else { alert('Erro ao carregar dados: ' + e.message); }
+  }
+}
+
+function showLoading(txt) {
+  document.getElementById('loading-text').textContent = txt || 'Carregando...';
+  document.getElementById('loading-overlay').classList.add('show');
+}
+function setLoadingText(txt) { document.getElementById('loading-text').textContent = txt; }
+function hideLoading() { document.getElementById('loading-overlay').classList.remove('show'); }
+
+// ─────────────────────────────────────────────
+// PARSERS
+// ─────────────────────────────────────────────
+function pNum(s) {
+  if (!s || s.trim() === '-' || s.trim() === '') return null;
+  return parseFloat(s.replace('%','').replace(',','.').trim());
+}
+
+function parseWeekly(rows) {
+  // Sections separated by WoW header rows
+  const sections = [];
+  let i = 0;
+  while (i < rows.length) {
+    const r = rows[i];
+    if (r && (r[1] === 'WoW' || r[1] === 'WoW - Bundle')) {
+      const weekRow = r;
+      const weeks = [], weekCols = [];
+      for (let c = 0; c < weekRow.length; c++) {
+        const v = weekRow[c];
+        if (v && v !== 'WoW' && v !== 'WoW - Bundle') { weeks.push(v); weekCols.push(c); }
+      }
+      const dataRows = [];
+      let j = i + 2;
+      while (j < rows.length) {
+        const dr = rows[j];
+        if (!dr || !dr.some(c=>c)) { j++; continue; }
+        if (dr[1] === 'WoW' || dr[1] === 'WoW - Bundle') break;
+        if (dr[1]) dataRows.push(dr);
+        j++;
+      }
+      // Build entity map
+      const byEntity = {};
+      dataRows.forEach(row => {
+        const entity = row[1];
+        if (!entity) return;
+        byEntity[entity] = {};
+        weeks.forEach((w, wi) => {
+          const c = weekCols[wi];
+          const csat = pNum(row[c]);
+          const nps  = pNum(row[c+5]);
+          if (csat !== null) {
+            byEntity[entity][w] = {
+              csat, nps,
+              qtd: parseInt(row[c+1])||0,
+              det: parseInt(row[c+2])||0,
+              prom: parseInt(row[c+3])||0,
+              neu:  parseInt(row[c+4])||0,
+            };
+          }
+        });
+      });
+      const validWeeks = weeks.filter(w => Object.values(byEntity).some(e => e[w]));
+      sections.push({ weeks: validWeeks, byEntity });
+      i = j;
+    } else { i++; }
+  }
+  return sections;
+}
+
+function parseCidades(rows) {
+  if (rows.length < 2) return [];
+  const headers = rows[1];
+  const idx = (name) => headers.findIndex(h => h && h.trim() === name.trim());
+  const COL = {
+    cidade: 0, uf: 1, porte: 2, risco: 3,
+    pros: idx('PROs Cadastrados'),
+    prosAtivos: idx('PROs Cadastrados Ativos D-30'),
+    servD30: idx('Serviços D-30'),
+    jobPro: idx('Job/PRO D-30'),
+    resolucao: idx('Resolução'),
+    noshowInc: idx('Taxa No Show Incidência D-30'),
+    noshowReal: idx('Taxa No Show Incidência Real D-30'),
+    openInc: idx('Taxa Open Incidencia D-30'),
+    openReal: idx('Taxa Open Incidencia  Real D-30'),
+    csatD30: idx('CSAT D-30'),
+    npsD30: idx('NPS D-30'),
+  };
+  return rows.slice(2).filter(r=>r[0]).map(r => ({
+    cidade: r[COL.cidade],
+    uf: r[COL.uf],
+    porte: r[COL.porte],
+    risco: r[COL.risco]||'',
+    pros: parseInt(r[COL.pros])||0,
+    prosAtivos: parseInt(r[COL.prosAtivos])||0,
+    servD30: parseInt(r[COL.servD30])||0,
+    jobPro: pNum(r[COL.jobPro]),
+    resolucao: pNum(r[COL.resolucao]),
+    noshowInc: pNum(r[COL.noshowInc]),
+    noshowReal: pNum(r[COL.noshowReal]),
+    openInc: pNum(r[COL.openInc]),
+    openReal: pNum(r[COL.openReal]),
+    csatD30: pNum(r[COL.csatD30]),
+    npsD30: pNum(r[COL.npsD30]),
+  }));
+}
+
+// ─────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  renderPage(id);
+}
+
+function renderPage(id) {
+  switch(id) {
+    case 'overview': renderOverview(); break;
+    case 'alertas':  renderAlertasPage(); break;
+    case 'bundle':   renderJornada('bundle'); break;
+    case 'avulso':   renderJornada('avulso'); break;
+    case 'sp':       renderState('sp'); break;
+    case 'rj':       renderState('rj'); break;
+    case 'mg':       renderState('mg'); break;
+    case 'cidades':  renderCidades(); break;
+  }
+}
+
+window.selectWeek = (pageKey, idx) => { ST.selWeeks[pageKey] = idx; renderPage(pageKey); };
+window.switchJornada = (page, j, btn) => {
+  document.querySelectorAll(`#page-${page} .j-tab`).forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  ST.spJornada = j;
+  renderPage(page);
+};
+
+// ─────────────────────────────────────────────
+// CHART HELPERS
+// ─────────────────────────────────────────────
+const cDef = () => ({
+  responsive:true, maintainAspectRatio:false,
+  interaction:{mode:'index',intersect:false},
+  plugins:{
+    legend:{labels:{color:C.muted,font:{family:'DM Mono',size:10},boxWidth:12}},
+    tooltip:{backgroundColor:'#11141b',borderColor:C.border,borderWidth:1,titleColor:'#e4e8f0',bodyColor:'#8892a4',titleFont:{family:'Syne',size:11},bodyFont:{family:'DM Mono',size:10}}
+  },
+  scales:{
+    x:{ticks:{color:C.muted,font:{family:'DM Mono',size:10}},grid:{color:C.border}},
+    y:{ticks:{color:C.muted,font:{family:'DM Mono',size:10}},grid:{color:C.border}}
+  }
+});
+
+function mkChart(id, cfg) {
+  if (ST.charts[id]) ST.charts[id].destroy();
+  const el = document.getElementById(id);
+  if (!el) return;
+  ST.charts[id] = new Chart(el.getContext('2d'), cfg);
+}
+
+function lineChart(id, labels, datasets, yMin, yMax, yCb) {
+  const opts = cDef();
+  opts.scales.y.min = yMin; opts.scales.y.max = yMax;
+  if (yCb) opts.scales.y.ticks.callback = yCb;
+  mkChart(id, { type:'line', data:{labels,datasets}, options:opts });
+}
+
+function barChart(id, labels, datasets, yMin, yMax, yCb) {
+  const opts = cDef();
+  opts.plugins.legend.display = false;
+  opts.scales.y.min = yMin; opts.scales.y.max = yMax;
+  if (yCb) opts.scales.y.ticks.callback = yCb;
+  mkChart(id, { type:'bar', data:{labels,datasets}, options:opts });
+}
+
+// ─────────────────────────────────────────────
+// RENDER HELPERS
+// ─────────────────────────────────────────────
+function kpiCls(v, meta, inv) {
+  if (v===null) return '';
+  if (inv) return v<=meta?'':v<=meta*1.5?'warn':'danger';
+  return v>=meta?'':v>=meta-(meta*.07)?'warn':'danger';
+}
+
+function kpiCard(label, v, unit, meta, inv, color) {
+  const cls = color || kpiCls(v, meta, inv);
+  const fmt = v!==null ? v.toFixed(unit==='%'?1:2)+(unit||'') : '—';
+  const delta = v!==null ? ((v-meta)>=0?'+':'')+(v-meta).toFixed(unit==='%'?1:2)+(unit||'')+' vs meta' : '—';
+  return `<div class="kpi ${cls}"><div class="kpi-label">${label}</div><div class="kpi-value">${fmt}</div><div class="kpi-meta"><span class="kpi-tag">${delta}</span></div></div>`;
+}
+
+function ufCard(name, csat, nps, qtd, det) {
+  const csatOk=csat>=META.csat, npsOk=nps>=META.nps;
+  const csatW=!csatOk&&csat>=META.csat-.3, npsW=!npsOk&&nps>=META.nps-15;
+  const cc=(!csatOk&&!csatW)||(!npsOk&&!npsW)?'alert':(!csatOk||!npsOk)?'warn':'';
+  const sl=cc==='alert'?'CRÍTICO':cc==='warn'?'ATENÇÃO':'OK';
+  const cC=csatOk?'good':csatW?'warn':'bad', nC=npsOk?'good':npsW?'warn':'bad';
+  const cCol=cC==='good'?C.green:cC==='warn'?C.yellow:C.red;
+  const nCol=nC==='good'?C.green:nC==='warn'?C.yellow:C.red;
+  return `<div class="uf-card ${cc}">
+    <div class="uf-header"><div class="uf-name">${name}</div><div class="uf-badge ${cc||'ok'}">${sl}</div></div>
+    <div class="uf-metrics">
+      <div><div class="uf-m-label">CSAT</div><div class="uf-m-value ${cC}">${csat.toFixed(2)}</div>
+        <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.min(100,(csat/5)*100)}%;background:${cCol}"></div></div></div>
+      <div><div class="uf-m-label">NPS</div><div class="uf-m-value ${nC}">${nps.toFixed(1)}%</div>
+        <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.min(100,Math.max(0,(nps+100)/200*100))}%;background:${nCol}"></div></div></div>
+      <div><div class="uf-m-label">Avaliações</div><div class="uf-m-value" style="color:var(--blue)">${qtd}</div></div>
+      <div><div class="uf-m-label">Detratoras</div><div class="uf-m-value ${det>0?'warn':'good'}">${det}</div></div>
+    </div></div>`;
+}
+
+function weekTabs(containerId, weeks, selIdx, pageKey) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = weeks.map((w,i)=>
+    `<button class="week-btn ${i===selIdx?'active':''}" onclick="selectWeek('${pageKey}',${i})">${w.replace('_',' ')}</button>`
+  ).join('');
+}
+
+function getSel(pageKey, data) {
+  if (!data?.weeks?.length) return null;
+  const idx = Math.min(ST.selWeeks[pageKey]??data.weeks.length-1, data.weeks.length-1);
+  return { week: data.weeks[idx], idx };
+}
+
+// ─────────────────────────────────────────────
+// OVERVIEW
+// ─────────────────────────────────────────────
+function renderOverview() {
+  const bd = ST.data.bundle?.[0], ad = ST.data.avulso?.[0];
+  const weeks = bd?.weeks || ad?.weeks || [];
+  if (!ST.selWeeks.overview && weeks.length) ST.selWeeks.overview = weeks.length-1;
+  const selIdx = Math.min(ST.selWeeks.overview??weeks.length-1, weeks.length-1);
+  const selWeek = weeks[selIdx];
+
+  if (ST.data['sb-user-name']) document.getElementById('sb-user-name').textContent = ST.data['sb-user-name'];
+
+  document.getElementById('ov-subtitle').textContent = selWeek
+    ? `Semana ${selWeek.replace('_',' ')} · ${weeks.length} semanas históricas`
+    : 'Aguardando dados...';
+  weekTabs('ov-weeks', weeks, selIdx, 'overview');
+
+  const bG = bd?.byEntity?.Geral?.[selWeek]||{};
+  const aG = ad?.byEntity?.Geral?.[selWeek]||{};
+
+  document.getElementById('ov-kpis').innerHTML =
+    kpiCard('Bundle CSAT', bG.csat??null, null, META.csat, false, 'blue') +
+    kpiCard('Bundle NPS',  bG.nps??null, '%', META.nps, false, 'blue') +
+    kpiCard('Avulso CSAT', aG.csat??null, null, META.csat) +
+    kpiCard('Avulso NPS',  aG.nps??null, '%', META.nps);
+
+  const bL = bd ? bd.weeks.map(w=>w.replace('_',' ')) : [];
+  lineChart('ov-csat-chart', bL, [
+    {label:'Bundle', data:bd?bd.weeks.map(w=>bd.byEntity.Geral?.[w]?.csat??null):[], borderColor:C.blue, backgroundColor:'rgba(77,159,255,.08)', tension:.4, fill:true, pointRadius:3},
+    {label:'Avulso', data:ad?ad.weeks.map(w=>ad.byEntity.Geral?.[w]?.csat??null):[], borderColor:C.green, tension:.4, borderDash:[4,2], pointRadius:3}
+  ], 1, 5);
+
+  lineChart('ov-nps-chart', bL, [
+    {label:'Bundle', data:bd?bd.weeks.map(w=>bd.byEntity.Geral?.[w]?.nps??null):[], borderColor:C.blue, backgroundColor:'rgba(77,159,255,.06)', tension:.4, fill:true, pointRadius:3},
+    {label:'Avulso', data:ad?ad.weeks.map(w=>ad.byEntity.Geral?.[w]?.nps??null):[], borderColor:C.orange, tension:.4, borderDash:[4,2], pointRadius:3}
+  ], -20, 110, v=>v+'%');
+
+  if (bd && selWeek) {
+    const ufs = Object.keys(bd.byEntity).filter(k=>k!=='Geral'&&bd.byEntity[k][selWeek]);
+    const csats = ufs.map(u=>bd.byEntity[u][selWeek].csat);
+    barChart('ov-uf-csat', ufs, [{data:csats, borderRadius:5,
+      backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 0, 5);
+  }
+
+  const alerts = buildAlerts();
+  document.getElementById('ov-alertas-mini').innerHTML = alerts.slice(0,4).map(a=>
+    `<div class="desvio ${a.t==='w'?'warn':''}"><div class="desvio-icon">${a.icon}</div>
+    <div class="desvio-body"><div class="desvio-title">${a.title}</div><div class="desvio-desc">${a.desc}</div></div>
+    <div class="desvio-val">${a.val}</div></div>`
+  ).join('') || '<div class="no-data" style="padding:16px;font-size:11px">✅ Sem alertas ativos</div>';
+}
+
+// ─────────────────────────────────────────────
+// JORNADA
+// ─────────────────────────────────────────────
+function renderJornada(j) {
+  const data = ST.data[j]?.[0];
+  if (!data) { document.getElementById(`${j}-kpis`).innerHTML=`<div class="no-data" style="grid-column:1/-1"><span class="icon">📂</span>Dados de ${j} não carregados</div>`; return; }
+  const {week,idx} = getSel(j, data)||{};
+  if (!week) return;
+  weekTabs(`${j}-weeks`, data.weeks, idx, j);
+
+  const g = data.byEntity.Geral?.[week]||{};
+  const pg = idx>0 ? data.byEntity.Geral?.[data.weeks[idx-1]]||{} : {};
+  const dC = g.csat&&pg.csat ? ((g.csat-pg.csat)>=0?'▲':'▼')+Math.abs(g.csat-pg.csat).toFixed(2)+' WoW' : '—';
+  const dN = g.nps&&pg.nps  ? ((g.nps-pg.nps)>=0?'▲':'▼')+Math.abs(g.nps-pg.nps).toFixed(1)+'pp WoW' : '—';
+
+  document.getElementById(`${j}-kpis`).innerHTML =
+    kpiCard('CSAT Geral', g.csat??null, null, META.csat) +
+    kpiCard('NPS Geral', g.nps??null, '%', META.nps) +
+    `<div class="kpi blue"><div class="kpi-label">Avaliações</div><div class="kpi-value">${g.qtd||0}</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">${dC}</span></div></div>` +
+    `<div class="kpi purple"><div class="kpi-label">NPS WoW</div><div class="kpi-value" style="font-size:18px">${dN}</div></div>`;
+
+  const col = j==='bundle'?C.blue:C.orange;
+  const labels = data.weeks.map(w=>w.replace('_',' '));
+  lineChart(`${j}-csat-trend`, labels, [{label:'CSAT', data:data.weeks.map(w=>data.byEntity.Geral?.[w]?.csat??null), borderColor:col, backgroundColor:'rgba(77,159,255,.06)', tension:.4, fill:true,
+    pointBackgroundColor:data.weeks.map(w=>{const v=data.byEntity.Geral?.[w]?.csat; return v&&v<META.csat?C.red:col;}), pointRadius:4}], 1, 5);
+  lineChart(`${j}-nps-trend`, labels, [{label:'NPS', data:data.weeks.map(w=>data.byEntity.Geral?.[w]?.nps??null), borderColor:col, tension:.4,
+    pointBackgroundColor:data.weeks.map(w=>{const v=data.byEntity.Geral?.[w]?.nps; return v&&v<META.nps?C.red:col;}), pointRadius:4}], -20, 110, v=>v+'%');
+
+  const ufs = Object.keys(data.byEntity).filter(k=>k!=='Geral'&&data.byEntity[k][week]).sort((a,b)=>data.byEntity[b][week].qtd-data.byEntity[a][week].qtd);
+  document.getElementById(`${j}-uf-grid`).innerHTML = ufs.map(u=>{const d=data.byEntity[u][week]; return ufCard(u,d.csat,d.nps,d.qtd,d.det);}).join('') || '<div class="no-data">Sem dados</div>';
+}
+
+// ─────────────────────────────────────────────
+// STATES (SP / RJ / MG)
+// ─────────────────────────────────────────────
+function renderState(sk) {
+  const fileKey = sk==='sp' ? (ST.spJornada==='bundle'?'spBundle':'spAvulso') : sk;
+  const data = ST.data[fileKey]?.[1];
+  const ufData = ST.data[fileKey]?.[0];
+  if (!data||!ufData) { document.getElementById(`${sk}-kpis`).innerHTML=`<div class="no-data" style="grid-column:1/-1"><span class="icon">📂</span>Dados de ${sk.toUpperCase()} não carregados</div>`; return; }
+
+  const {week,idx} = getSel(sk, ufData)||{};
+  if (!week) return;
+  weekTabs(`${sk}-weeks`, ufData.weeks, idx, sk);
+
+  const stId = {sp:'SP',rj:'RJ',mg:'MG'}[sk];
+  const g = ufData.byEntity[stId]?.[week]||{};
+  const pg = idx>0 ? ufData.byEntity[stId]?.[ufData.weeks[idx-1]]||{} : {};
+  const dC = g.csat&&pg.csat ? ((g.csat-pg.csat)>=0?'▲':'▼')+Math.abs(g.csat-pg.csat).toFixed(2)+' WoW' : '—';
+
+  document.getElementById(`${sk}-kpis`).innerHTML =
+    kpiCard(`${stId} CSAT`, g.csat??null, null, META.csat) +
+    kpiCard(`${stId} NPS`, g.nps??null, '%', META.nps) +
+    `<div class="kpi blue"><div class="kpi-label">Avaliações</div><div class="kpi-value">${g.qtd||0}</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">${dC}</span></div></div>` +
+    `<div class="kpi ${(g.det||0)>0?'warn':''}"><div class="kpi-label">Detratoras</div><div class="kpi-value">${g.det||0}</div></div>`;
+
+  const cities = Object.keys(data.byEntity).filter(k=>data.byEntity[k][week]).sort((a,b)=>data.byEntity[b][week].qtd-data.byEntity[a][week].qtd).slice(0,10);
+  const csats = cities.map(c=>data.byEntity[c][week].csat);
+  const npss  = cities.map(c=>data.byEntity[c][week].nps);
+  const lbl   = cities.map(c=>c.length>14?c.slice(0,12)+'…':c);
+
+  barChart(`${sk}-csat-bar`, lbl, [{data:csats, borderRadius:5, backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 0, 5);
+  barChart(`${sk}-nps-bar`,  lbl, [{data:npss,  borderRadius:5, backgroundColor:npss.map(v=>v>=META.nps?'rgba(77,159,255,.7)':v>=META.nps-15?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], -20, 110, v=>v+'%');
+
+  document.getElementById(`${sk}-cidade-grid`).innerHTML = cities.map(c=>{const d=data.byEntity[c][week]; return ufCard(c,d.csat,d.nps,d.qtd,d.det);}).join('') || '<div class="no-data">Sem dados</div>';
+}
+
+// ─────────────────────────────────────────────
+// CIDADES
+// ─────────────────────────────────────────────
+function renderCidades() {
+  const cities = ST.data.cidades || [];
+  ST.cityData = cities;
+  if (!cities.length) { document.getElementById('cidades-kpis').innerHTML=`<div class="no-data" style="grid-column:1/-1"><span class="icon">📂</span>Dados de Cidades não carregados</div>`; return; }
+
+  const valid = cities.filter(c=>c.csatD30!==null&&c.servD30>0);
+  const tot = valid.reduce((s,c)=>s+c.servD30,0)||1;
+  const avgCsat = valid.reduce((s,c)=>s+c.csatD30*(c.servD30/tot),0);
+  const avgNps  = valid.reduce((s,c)=>s+(c.npsD30||0)*(c.servD30/tot),0);
+  const openArr = cities.filter(c=>c.openInc!==null);
+  const avgOpen = openArr.reduce((s,c)=>s+c.openInc,0)/(openArr.length||1);
+  const avgOpenR= openArr.reduce((s,c)=>s+(c.openReal||0),0)/(openArr.length||1);
+
+  document.getElementById('cidades-kpis').innerHTML =
+    kpiCard('CSAT Médio D-30', avgCsat, null, META.csat) +
+    kpiCard('NPS Médio D-30', avgNps, '%', META.nps) +
+    `<div class="kpi orange"><div class="kpi-label">Open Inc. Médio</div><div class="kpi-value">${avgOpen.toFixed(1)}%</div><div class="kpi-meta"><span class="kpi-tag">Meta &lt;${META.open}%</span></div></div>` +
+    kpiCard('Open Real Médio', avgOpenR, '%', META.open, true) +
+    `<div class="kpi blue"><div class="kpi-label">Total Cidades</div><div class="kpi-value" style="color:var(--blue)">${cities.length}</div></div>`;
+
+  const byOpen = [...cities].filter(c=>c.openInc!==null).sort((a,b)=>b.openInc-a.openInc).slice(0,12);
+  barChart('cidades-open-chart', byOpen.map(c=>c.cidade.length>14?c.cidade.slice(0,12)+'…':c.cidade), [{data:byOpen.map(c=>c.openInc), borderRadius:4,
+    backgroundColor:byOpen.map(c=>c.openInc>META.open?'rgba(255,71,87,.7)':c.openInc>META.open*.7?'rgba(255,193,7,.7)':'rgba(0,214,143,.7)')}], 0, null, v=>v+'%');
+
+  const byNS = [...cities].filter(c=>c.noshowInc!==null).sort((a,b)=>b.noshowInc-a.noshowInc).slice(0,12);
+  barChart('cidades-noshow-chart', byNS.map(c=>c.cidade.length>14?c.cidade.slice(0,12)+'…':c.cidade), [{data:byNS.map(c=>c.noshowInc), borderRadius:4,
+    backgroundColor:byNS.map(()=>'rgba(77,159,255,.7)')}], 0, null, v=>v+'%');
+
+  filterCidades();
+}
+
+let riskFilter = 'all';
+window.setRiskFilter = (f, btn) => {
+  riskFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  filterCidades();
+};
+
+window.filterCidades = () => {
+  const q = (document.getElementById('cidade-search')?.value||'').toLowerCase();
+  const rMap = {crit:'CRÍTICO',alto:'ALTO',medio:'MÉDIO',baixo:'BAIXO'};
+  const filtered = (ST.cityData||[]).filter(c => {
+    const mq = !q || c.cidade.toLowerCase().includes(q) || c.uf.toLowerCase().includes(q);
+    const mr = riskFilter==='all' || c.risco.includes(rMap[riskFilter]||'');
+    return mq && mr;
+  });
+  const gC = (v,m,inv) => { if(v===null)return 'neutral'; if(inv)return v<=m?'good':v<=m*1.5?'warn':'bad'; return v>=m?'good':v>=m-.3?'warn':'bad'; };
+  document.getElementById('cidades-tbody').innerHTML = filtered.map(c=>`
+    <tr>
+      <td class="city-name">${c.cidade}</td>
+      <td><span class="uf-tag">${c.uf}</span></td>
+      <td>${c.risco}</td>
+      <td class="num neutral">${c.pros}</td>
+      <td class="num neutral">${c.prosAtivos}</td>
+      <td class="num neutral">${c.servD30.toLocaleString('pt-BR')}</td>
+      <td class="num neutral">${c.jobPro??'—'}</td>
+      <td class="num ${gC(c.openInc,META.open,true)}">${c.openInc!==null?c.openInc.toFixed(1)+'%':'—'}</td>
+      <td class="num ${gC(c.openReal,META.open,true)}">${c.openReal!==null?c.openReal.toFixed(1)+'%':'—'}</td>
+      <td class="num ${gC(c.noshowInc,5,true)}">${c.noshowInc!==null?c.noshowInc.toFixed(2)+'%':'—'}</td>
+      <td class="num ${gC(c.noshowReal,5,true)}">${c.noshowReal!==null?c.noshowReal.toFixed(2)+'%':'—'}</td>
+      <td class="num ${gC(c.resolucao,70,false)}">${c.resolucao!==null?c.resolucao.toFixed(1)+'%':'—'}</td>
+      <td class="num ${gC(c.csatD30,META.csat,false)}">${c.csatD30!==null?c.csatD30.toFixed(2):'—'}</td>
+      <td class="num ${gC(c.npsD30,META.nps,false)}">${c.npsD30!==null?c.npsD30.toFixed(1)+'%':'—'}</td>
+    </tr>`).join('');
+};
+
+// ─────────────────────────────────────────────
+// ALERTS
+// ─────────────────────────────────────────────
+function buildAlerts() {
+  const alerts = [];
+  ['bundle','avulso'].forEach(j => {
+    const data = ST.data[j]?.[0];
+    if (!data) return;
+    const {week} = getSel(j,data)||{};
+    if (!week) return;
+    Object.entries(data.byEntity).forEach(([entity, wks]) => {
+      const d = wks[week]; if (!d) return;
+      if (d.csat < META.csat) alerts.push({t:d.csat<META.csat-.5?'c':'w', icon:d.csat<META.csat-.5?'🔴':'🟡',
+        title:`[${j.toUpperCase()}] ${entity} — CSAT baixo`, desc:`${d.csat.toFixed(2)} (meta ${META.csat}) · ${d.qtd} avaliações`, val:(d.csat-META.csat).toFixed(2)});
+      if (d.nps!==null && d.nps<META.nps) alerts.push({t:d.nps<0?'c':'w', icon:d.nps<0?'🔴':'🟡',
+        title:`[${j.toUpperCase()}] ${entity} — NPS baixo`, desc:`${d.nps.toFixed(1)}% (meta ${META.nps}%)`, val:(d.nps-META.nps).toFixed(1)+'pp'});
+    });
+  });
+  (ST.data.cidades||[]).forEach(c => {
+    if (c.openInc!==null && c.openInc>META.open) alerts.push({t:c.openInc>META.open*2?'c':'w', icon:'📭',
+      title:`${c.cidade} (${c.uf}) — Open acima da meta`, desc:`Open Inc.: ${c.openInc.toFixed(1)}% (meta <${META.open}%)`, val:'+'+(c.openInc-META.open).toFixed(1)+'%'});
+  });
+  alerts.sort((a,b)=>a.t==='c'?-1:1);
+  const n = alerts.length;
+  const badge = document.getElementById('badge-alertas');
+  if (badge) { badge.textContent=n; badge.style.display=n>0?'':'none'; }
+  return alerts;
+}
+
+function renderAlertasPage() {
+  const alerts = buildAlerts();
+  document.getElementById('alertas-full').innerHTML = alerts.map(a=>
+    `<div class="desvio ${a.t==='w'?'warn':''}"><div class="desvio-icon">${a.icon}</div>
+    <div class="desvio-body"><div class="desvio-title">${a.title}</div><div class="desvio-desc">${a.desc}</div></div>
+    <div class="desvio-val">${a.val}</div></div>`
+  ).join('') || '<div class="no-data"><span class="icon">✅</span>Nenhum alerta ativo</div>';
+}
+</script>
+</body>
+</html>
