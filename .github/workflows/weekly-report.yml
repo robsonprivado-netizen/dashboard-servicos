@@ -1,8 +1,8 @@
-name: Weekly Report
+- cron: '0 13 * * 1'name: Weekly Report
 
 on:
   schedule:
-    - cron: '0 12 * * 1'
+    - cron: '0 13 * * 1'
   workflow_dispatch:
 
 jobs:
