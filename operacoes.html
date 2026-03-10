@@ -884,7 +884,7 @@ function renderOverview() {
   ], -20, 110, v=>v+'%');
 
   // CSAT por UF: try section [0] first (UFs), fall back to [1]
-  const bdUF = ST.data.bundle?.[0] || ST.data.bundle?.[1];
+  const bdUF = ST.data.bundle?.[1] || ST.data.bundle?.[0];
   if (bdUF) {
     const bdWeeks = bdUF.weeks || [];
     // Find most recent week with any non-Geral entity having CSAT data
