@@ -1,13 +1,68 @@
 import https from "https";
 import nodemailer from "nodemailer";
+import { GoogleAuth } from "google-auth-library";
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_PASS = process.env.GMAIL_PASS;
+const SHEET_ID = "1-iFLORoVt9ocMaGa5tLLD7NgoU_3d3TV7KOlNUoRUuw";
+const SHEET_NAME = "Semanal";
 const RECIPIENTS = ["robson.privado@madeiramadeira.com.br","fernando.belleza@madeiramadeira.com.br","alexandre.pereira@iguanafix.com.br","bianca.pessoa@madeiramadeira.com.br","lucas.navarro@madeiramadeira.com.br"];
-const DATA = `DADOS S1-S10/2026 (R$k): GMV TOTAL S10=1098 WoW+17,6%. GMV Automatico=598 WoW+13,9%. GMV App=306 WoW+19,5%. GMV Site=277 WoW+7,3%. GMV GuideShops=306 WoW+23,6%. GMV TDV=161 WoW+25,8%. GMV Avulso=60 WoW-18%. Conversao=23,6% recorde historico. AOV=240. CONTEXTO: Marketplace servicos para casa. Canais: App/Site (digital), GuideShops (loja fisica), TDV (vendedor dedicado), Avulso (montagem, limpeza, impermeabilizacao).`;
 
 function post(h,p,hd,b){return new Promise((res,rej)=>{const d=JSON.stringify(b);const r=https.request({hostname:h,path:p,method:"POST",headers:{...hd,"Content-Length":Buffer.byteLength(d)}},(rs)=>{let raw="";rs.on("data",c=>raw+=c);rs.on("end",()=>{try{res(JSON.parse(raw))}catch{res(raw)}})});r.on("error",rej);r.write(d);r.end()})}
+
+async function fetchSheet(){
+  console.log("📊 Buscando planilha...");
+  const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+  const auth = new GoogleAuth({credentials:creds,scopes:["https://www.googleapis.com/auth/spreadsheets.readonly"]});
+  const token = await auth.getAccessToken();
+  const range = encodeURIComponent(SHEET_NAME+"!A1:DZ300");
+  const data = await new Promise((res,rej)=>{
+    https.get(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}`,{headers:{Authorization:`Bearer ${token}`}},(r)=>{
+      let raw="";r.on("data",c=>raw+=c);r.on("end",()=>{try{res(JSON.parse(raw))}catch(e){rej(e)}});
+    }).on("error",rej);
+  });
+  if(data.error) throw new Error("Sheets API: "+JSON.stringify(data.error));
+  const lines=(data.values||[]).map(r=>r.map(v=>(v||"").trim()));
+  console.log("✅ Linhas encontradas:",lines.length);
+  return lines;
+}
+
+function parseData(lines){
+  let hi=-1;
+  for(let i=0;i<lines.length;i++){if(lines[i].some(c=>/^\d+\/20(25|26)$/.test(c))){hi=i;break;}}
+  if(hi===-1)hi=5;
+  const headers=lines[hi]||[];
+  console.log("📌 Header linha",hi,"colunas",headers.length);
+  const wc=[];headers.forEach((h,i)=>{if(/^\d+\/2026$/.test(h))wc.push({col:i,week:h});});
+  console.log("📅 Semanas 2026:",wc.map(w=>w.week).join(", "));
+  const rw=wc.filter(({col})=>lines.slice(hi+1).some(r=>r[col]&&r[col]!=="0"&&r[col]!=="")).slice(-9);
+  const metrics={};
+  const targets=["GMV TOTAL","GMV Automático","GMV App","GMV Site","GMV GuideShops","GMV TDV","GMV AVULSO TOTAL","CONVERSÃO GERAL (BUNDLE)","AOV TOTAL"];
+  lines.forEach(row=>{
+    const name=row[0]?.trim();
+    if(!name)return;
+    targets.forEach(t=>{
+      if(name===t&&!metrics[t]){
+        metrics[t]={values:rw.map(({col,week})=>({week,value:row[col]||"0"})),wow:row[row.length-6]||"",vsMeta:row[row.length-4]||""};
+        console.log("✅",name,":",metrics[t].values.map(v=>v.value).join(", "));
+      }
+    });
+  });
+  return{metrics,rw};
+}
+
+function buildData(metrics,rw){
+  let s=`DADOS PERFORMANCE SERVIÇOS 2026\nSemanas: ${rw.map(w=>w.week).join(", ")}\n\n`;
+  Object.entries(metrics).forEach(([name,data])=>{
+    s+=`${name}: ${data.values.map(v=>`${v.week}=${v.value}`).join(", ")}`;
+    if(data.wow)s+=` | WoW: ${data.wow}`;
+    if(data.vsMeta)s+=` | vs Meta: ${data.vsMeta}`;
+    s+="\n";
+  });
+  s+="\nCONTEXTO: Marketplace servicos para casa. Canais: App/Site (digital), GuideShops (loja fisica), TDV (vendedor dedicado), Avulso (montagem, limpeza, impermeabilizacao).";
+  return s;
+}
 
 function buildEmail(a){
   const today=new Date().toLocaleDateString("pt-BR",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
@@ -23,12 +78,15 @@ function buildEmail(a){
 async function main(){
   try{
     console.log("🚀 Iniciando...");
-    const r=await post("api.anthropic.com","/v1/messages",{"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"},{model:"claude-sonnet-4-20250514",max_tokens:2000,system:'Analista estrategico de marketplace de servicos. Responda SOMENTE JSON sem markdown sem backticks: {"semana_referencia":"string","executive_summary":"string","key_drivers":[{"indicador":"string","variacao":"string","drivers":["string"]}],"structural_trends":[{"indicador":"string","tipo":"crescimento consistente|queda consistente|volatilidade","analise":"string"}],"risks_anomalies":[{"risco":"string","driver":"string"}],"actions":[{"area":"string","acao":"string"}],"questions":["string"]}',messages:[{role:"user",content:DATA}]});
+    const lines=await fetchSheet();
+    const {metrics,rw}=parseData(lines);
+    const data=buildData(metrics,rw);
+    const r=await post("api.anthropic.com","/v1/messages",{"Content-Type":"application/json","x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01"},{model:"claude-sonnet-4-20250514",max_tokens:2000,system:'Analista estrategico de marketplace de servicos. Responda SOMENTE JSON sem markdown sem backticks: {"semana_referencia":"string","executive_summary":"string","key_drivers":[{"indicador":"string","variacao":"string","drivers":["string"]}],"structural_trends":[{"indicador":"string","tipo":"crescimento consistente|queda consistente|volatilidade","analise":"string"}],"risks_anomalies":[{"risco":"string","driver":"string"}],"actions":[{"area":"string","acao":"string"}],"questions":["string"]}',messages:[{role:"user",content:data}]});
     const a=JSON.parse(r.content.map(b=>b.text||"").join("").replace(/```json|```/g,"").trim());
-    console.log("✅ Analise gerada:",a.semana_referencia);
+    console.log("✅ Analise:",a.semana_referencia);
     const tr=nodemailer.createTransport({service:"gmail",auth:{user:GMAIL_USER,pass:GMAIL_PASS}});
     await tr.sendMail({from:`"Dashboard Servicos" <${GMAIL_USER}>`,to:RECIPIENTS.join(","),subject:`📊 Analise Executiva — ${a.semana_referencia}`,html:buildEmail(a)});
-    console.log("✅ Email enviado para",RECIPIENTS.length,"destinatarios!");
+    console.log("✅ Email enviado!");
   }catch(e){console.error("❌",e.message);process.exit(1)}
 }
 main();
