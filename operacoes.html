@@ -848,7 +848,10 @@ function getSel(pageKey, data) {
 // ─────────────────────────────────────────────
 function renderOverview() {
   const bd = ST.data.bundle?.[0], ad = ST.data.avulso?.[0];
-  const weeks = bd?.weeks || ad?.weeks || [];
+
+  // Build unified week list merging both sources
+  const allWeeksSet = new Set([...(bd?.weeks||[]), ...(ad?.weeks||[])]);
+  const weeks = [...allWeeksSet].sort();
   if (!ST.selWeeks.overview && weeks.length) ST.selWeeks.overview = weeks.length-1;
   const selIdx = Math.min(ST.selWeeks.overview??weeks.length-1, weeks.length-1);
   const selWeek = weeks[selIdx];
@@ -872,15 +875,15 @@ function renderOverview() {
     kpiCard('Avulso CSAT', aG.csat??null, null, META.csat, false, '',    aG.csat&&aGp.csat?{v:aG.csat-aGp.csat}:null) +
     kpiCard('Avulso NPS',  aG.nps??null,  '%', META.nps,  false, '',    aG.nps&&aGp.nps?{v:aG.nps-aGp.nps}:null);
 
-  const bL = bd ? bd.weeks.map(w=>w.replace('_',' ')) : [];
+  const bL = weeks.map(w=>w.replace('_',' '));
   lineChart('ov-csat-chart', bL, [
-    {label:'Bundle', data:bd?bd.weeks.map(w=>bd.byEntity.Geral?.[w]?.csat??null):[], borderColor:C.blue, backgroundColor:'rgba(77,159,255,.08)', tension:.4, fill:true, pointRadius:3},
-    {label:'Avulso', data:ad?ad.weeks.map(w=>ad.byEntity.Geral?.[w]?.csat??null):[], borderColor:C.green, tension:.4, borderDash:[4,2], pointRadius:3}
+    {label:'Bundle', data:weeks.map(w=>bd?.byEntity?.Geral?.[w]?.csat??null), borderColor:C.blue, backgroundColor:'rgba(77,159,255,.08)', tension:.4, fill:true, pointRadius:3, spanGaps:true},
+    {label:'Avulso', data:weeks.map(w=>ad?.byEntity?.Geral?.[w]?.csat??null), borderColor:C.green, tension:.4, borderDash:[4,2], pointRadius:3, spanGaps:true}
   ], 3.8, 5.05);
 
   lineChart('ov-nps-chart', bL, [
-    {label:'Bundle', data:bd?bd.weeks.map(w=>bd.byEntity.Geral?.[w]?.nps??null):[], borderColor:C.blue, backgroundColor:'rgba(77,159,255,.06)', tension:.4, fill:true, pointRadius:3},
-    {label:'Avulso', data:ad?ad.weeks.map(w=>ad.byEntity.Geral?.[w]?.nps??null):[], borderColor:C.orange, tension:.4, borderDash:[4,2], pointRadius:3}
+    {label:'Bundle', data:weeks.map(w=>bd?.byEntity?.Geral?.[w]?.nps??null), borderColor:C.blue, backgroundColor:'rgba(77,159,255,.06)', tension:.4, fill:true, pointRadius:3, spanGaps:true},
+    {label:'Avulso', data:weeks.map(w=>ad?.byEntity?.Geral?.[w]?.nps??null), borderColor:C.orange, tension:.4, borderDash:[4,2], pointRadius:3, spanGaps:true}
   ], -20, 110, v=>v+'%');
 
   // CSAT por UF: try section [0] first (UFs), fall back to [1]
