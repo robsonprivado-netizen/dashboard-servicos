@@ -553,7 +553,15 @@ async function fetchSheet(sheetName) {
   const range = encodeURIComponent(sheetName);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}`;
   const res = await fetch(url, { headers: { Authorization: 'Bearer ' + ST.token } });
-  if (!res.ok) throw new Error(`Erro ao carregar aba "${sheetName}": ${res.status}`);
+  if (res.status === 401) {
+    sessionStorage.removeItem('ms_ops_token');
+    ST.token = null;
+    hideLoading();
+    handleLogout();
+    document.getElementById('login-status').textContent = 'Sessao expirada. Faca login novamente.';
+    throw new Error('401');
+  }
+  if (!res.ok) throw new Error('Erro ao carregar aba "' + sheetName + '": ' + res.status);
   const json = await res.json();
   return json.values || [];
 }
@@ -564,7 +572,7 @@ async function loadAllSheets() {
     const entries = Object.entries(SHEETS);
     for (let i = 0; i < entries.length; i++) {
       const [key, name] = entries[i];
-      setLoadingText(`Carregando: ${name} (${i+1}/${entries.length})`);
+      setLoadingText('Carregando: ' + name + ' (' + (i+1) + '/' + entries.length + ')');
       try {
         const rows = await fetchSheet(name);
         if (key === 'cidades') {
@@ -572,7 +580,7 @@ async function loadAllSheets() {
         } else {
           ST.data[key] = parseWeekly(rows);
         }
-      } catch(e) { console.warn(e); }
+      } catch(e) { if (e.message === '401') return; console.warn(e); }
     }
     const now = new Date();
     document.getElementById('sb-last-update').textContent = 'Atualizado ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
