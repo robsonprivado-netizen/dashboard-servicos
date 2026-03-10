@@ -190,9 +190,45 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .no-data{text-align:center;padding:40px;color:var(--muted);font-size:13px;font-family:'DM Mono',monospace}
 .no-data .icon{font-size:32px;margin-bottom:10px;display:block}
 
-footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.kpi-wow{margin-left:4px}
+.wow-up{background:rgba(0,214,143,.1)!important;color:var(--green)!important}
+.wow-down{background:rgba(255,71,87,.1)!important;color:var(--red)!important}
+
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .anim{animation:fadeUp .35s ease both}
+/* AI ANALYSIS */
+.ai-analysis-wrap{background:linear-gradient(135deg,rgba(0,214,143,.04) 0%,rgba(77,159,255,.04) 100%);border:1px solid rgba(0,214,143,.2);border-radius:16px;padding:24px;margin-top:14px;position:relative;overflow:hidden}
+.ai-analysis-wrap::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),var(--blue),var(--purple))}
+.ai-analysis-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.ai-header-left{display:flex;align-items:center;gap:14px}
+.ai-icon{width:40px;height:40px;background:linear-gradient(135deg,rgba(0,214,143,.2),rgba(77,159,255,.2));border:1px solid rgba(0,214,143,.3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--green);flex-shrink:0}
+.ai-title{font-size:14px;font-weight:800;color:var(--text)}
+.ai-subtitle{font-size:10px;color:var(--muted);font-family:"DM Mono",monospace;margin-top:2px}
+.ai-refresh-btn{display:flex;align-items:center;gap:7px;padding:9px 18px;background:linear-gradient(135deg,rgba(0,214,143,.15),rgba(77,159,255,.1));border:1px solid rgba(0,214,143,.3);border-radius:9px;color:var(--green);font-family:"Syne",sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.ai-refresh-btn:hover{background:linear-gradient(135deg,rgba(0,214,143,.25),rgba(77,159,255,.15));border-color:var(--green)}
+.ai-refresh-btn:disabled{opacity:.5;cursor:not-allowed}
+.ai-placeholder{display:flex;align-items:center;gap:14px;padding:20px;background:rgba(255,255,255,.02);border-radius:10px;border:1px dashed var(--border)}
+.ai-placeholder-icon{font-size:24px;color:var(--muted);flex-shrink:0}
+.ai-placeholder-text{font-size:12px;color:var(--muted);font-family:"DM Mono",monospace;line-height:1.6}
+.ai-loading{display:flex;align-items:center;gap:12px;padding:24px;color:var(--muted);font-family:"DM Mono",monospace;font-size:12px}
+.ai-spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.ai-sections{display:flex;flex-direction:column;gap:16px}
+.ai-section{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ai-section-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)}
+.ai-section-icon{font-size:16px;width:24px;text-align:center}
+.ai-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted2)}
+.ai-section-body{padding:16px;font-size:12px;color:var(--text);line-height:1.75;font-family:"DM Mono",monospace}
+.ai-section-body strong{color:var(--green);font-weight:600}
+.ai-section-body ul{padding-left:18px;margin:8px 0}
+.ai-section-body li{margin-bottom:7px}
+.ai-section-body .lbl{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;margin-right:6px;font-family:"Syne",sans-serif;font-weight:700}
+.ai-section-body .lbl-red{background:rgba(255,71,87,.15);color:var(--red)}
+.ai-section-body .lbl-yellow{background:rgba(255,193,7,.15);color:var(--yellow)}
+.ai-section-body .lbl-green{background:rgba(0,214,143,.15);color:var(--green)}
+.ai-section-body .lbl-blue{background:rgba(77,159,255,.15);color:var(--blue)}
+.ai-section-body .lbl-purple{background:rgba(168,85,247,.15);color:var(--purple)}
+.ai-error{padding:16px;color:var(--red);font-size:12px;font-family:"DM Mono",monospace}
+
 </style>
 </head>
 <body>
@@ -272,6 +308,28 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--border);displ
         <div class="card"><div class="card-title"><span class="dot"></span> CSAT por UF — Semana Atual (Bundle)</div><div class="chart-wrap h200"><canvas id="ov-uf-csat"></canvas></div></div>
         <div class="card"><div class="card-title"><span class="dot orange"></span> Top Alertas</div><div class="desvios-list" id="ov-alertas-mini"></div></div>
       </div>
+
+      <!-- AI ANALYSIS -->
+      <div class="ai-analysis-wrap" id="ai-analysis-wrap">
+        <div class="ai-analysis-header">
+          <div class="ai-header-left">
+            <div class="ai-icon">✶</div>
+            <div>
+              <div class="ai-title">Análise Crítica — McKinsey Framework</div>
+              <div class="ai-subtitle">Gerada por IA · Priorização por Impacto × Volume · <span id="ai-timestamp">—</span></div>
+            </div>
+          </div>
+          <button class="ai-refresh-btn" id="ai-refresh-btn" onclick="runAIAnalysis()">
+            <span id="ai-btn-icon">✶</span> Gerar análise
+          </button>
+        </div>
+        <div id="ai-content">
+          <div class="ai-placeholder">
+            <div class="ai-placeholder-icon">✶</div>
+            <div class="ai-placeholder-text">Clique em “Gerar análise” após carregar os dados para obter uma análise crítica completa com priorização por impacto × volume, hipóteses de causa-raiz e ações recomendadas.</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ALERTAS -->
@@ -327,6 +385,22 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--border);displ
       </div>
       <div class="sec-label">Cidades de SP</div>
       <div class="uf-grid" id="sp-cidade-grid"></div>
+
+      <div class="sec-label">Histórico Top 10 Cidades</div>
+      <div class="jornada-tabs" style="margin-bottom:14px">
+        <button class="j-tab bundle active" id="hist-bundle-btn" onclick="switchHistJornada('bundle',this)">📦 Bundle</button>
+        <button class="j-tab avulso" id="hist-avulso-btn" onclick="switchHistJornada('avulso',this)">🛠 Avulso</button>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> CSAT Histórico — Top 10 Cidades SP</div>
+          <div class="chart-wrap" style="height:300px"><canvas id="sp-hist-csat"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot blue"></span> NPS Histórico — Top 10 Cidades SP</div>
+          <div class="chart-wrap" style="height:300px"><canvas id="sp-hist-nps"></canvas></div>
+        </div>
+      </div>
     </div>
 
     <!-- RJ -->
@@ -423,6 +497,7 @@ const ST = {
   data: {},
   selWeeks: {},
   spJornada: 'bundle',
+  spHistJornada: 'bundle',
   cityData: [],
   cityRiskFilter: 'all',
   charts: {},
@@ -649,6 +724,14 @@ window.switchJornada = (page, j, btn) => {
   renderPage(page);
 };
 
+window.switchHistJornada = (j, btn) => {
+  document.getElementById('hist-bundle-btn').classList.remove('active');
+  document.getElementById('hist-avulso-btn').classList.remove('active');
+  btn.classList.add('active');
+  ST.spHistJornada = j;
+  renderSPHistory();
+};
+
 // ─────────────────────────────────────────────
 // CHART HELPERS
 // ─────────────────────────────────────────────
@@ -696,14 +779,15 @@ function kpiCls(v, meta, inv) {
   return v>=meta?'':v>=meta-(meta*.07)?'warn':'danger';
 }
 
-function kpiCard(label, v, unit, meta, inv, color) {
+function kpiCard(label, v, unit, meta, inv, color, wow) {
   const cls = color || kpiCls(v, meta, inv);
-  const fmt = v!==null ? v.toFixed(unit==='%'?1:2)+(unit||'') : '—';
-  const delta = v!==null ? ((v-meta)>=0?'+':'')+(v-meta).toFixed(unit==='%'?1:2)+(unit||'')+' vs meta' : '—';
-  return `<div class="kpi ${cls}"><div class="kpi-label">${label}</div><div class="kpi-value">${fmt}</div><div class="kpi-meta"><span class="kpi-tag">${delta}</span></div></div>`;
+  const fmt = v!==null ? v.toFixed(unit==='%'?1:2)+(unit||'') : '&#8212;';
+  const delta = v!==null ? ((v-meta)>=0?'+':'')+(v-meta).toFixed(unit==='%'?1:2)+(unit||'')+' vs meta' : '&#8212;';
+  const wowHtml = wow ? `<span class="kpi-tag kpi-wow ${wow.v>=0?'wow-up':'wow-down'}">${wow.v>=0?'&#9650;':'&#9660;'}${Math.abs(wow.v).toFixed(unit==='%'?1:2)}${unit||''} WoW</span>` : '';
+  return `<div class="kpi ${cls}"><div class="kpi-label">${label}</div><div class="kpi-value">${fmt}</div><div class="kpi-meta"><span class="kpi-tag">${delta}</span>${wowHtml}</div></div>`;
 }
 
-function ufCard(name, csat, nps, qtd, det) {
+function ufCard(name, csat, nps, qtd, det, prev) {
   const csatOk=csat>=META.csat, npsOk=nps>=META.nps;
   const csatW=!csatOk&&csat>=META.csat-.3, npsW=!npsOk&&nps>=META.nps-15;
   const cc=(!csatOk&&!csatW)||(!npsOk&&!npsW)?'alert':(!csatOk||!npsOk)?'warn':'';
@@ -711,14 +795,19 @@ function ufCard(name, csat, nps, qtd, det) {
   const cC=csatOk?'good':csatW?'warn':'bad', nC=npsOk?'good':npsW?'warn':'bad';
   const cCol=cC==='good'?C.green:cC==='warn'?C.yellow:C.red;
   const nCol=nC==='good'?C.green:nC==='warn'?C.yellow:C.red;
+  const wowCsat = prev?.csat ? (csat-prev.csat) : null;
+  const wowNps  = prev?.nps  ? (nps-prev.nps)   : null;
+  const wowQtd  = prev?.qtd  ? (qtd-prev.qtd)   : null;
+  const wArrow  = (v,decimals) => v===null?'' : `<span style="font-size:9px;margin-left:4px;color:${v>=0?C.green:C.red}">${v>=0?'&#9650;':'&#9660;'}${Math.abs(v).toFixed(decimals)} WoW</span>`;
+  const wQtd    = wowQtd===null?'' : `<span style="font-size:9px;margin-left:4px;color:${wowQtd>=0?C.green:C.red}">${wowQtd>=0?'+':''}${wowQtd}</span>`;
   return `<div class="uf-card ${cc}">
     <div class="uf-header"><div class="uf-name">${name}</div><div class="uf-badge ${cc||'ok'}">${sl}</div></div>
     <div class="uf-metrics">
-      <div><div class="uf-m-label">CSAT</div><div class="uf-m-value ${cC}">${csat.toFixed(2)}</div>
+      <div><div class="uf-m-label">CSAT</div><div class="uf-m-value ${cC}">${csat.toFixed(2)}${wArrow(wowCsat,2)}</div>
         <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.min(100,(csat/5)*100)}%;background:${cCol}"></div></div></div>
-      <div><div class="uf-m-label">NPS</div><div class="uf-m-value ${nC}">${nps.toFixed(1)}%</div>
+      <div><div class="uf-m-label">NPS</div><div class="uf-m-value ${nC}">${nps.toFixed(1)}%${wArrow(wowNps,1)}</div>
         <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.min(100,Math.max(0,(nps+100)/200*100))}%;background:${nCol}"></div></div></div>
-      <div><div class="uf-m-label">Avaliações</div><div class="uf-m-value" style="color:var(--blue)">${qtd}</div></div>
+      <div><div class="uf-m-label">Avaliações</div><div class="uf-m-value" style="color:var(--blue)">${qtd}${wQtd}</div></div>
       <div><div class="uf-m-label">Detratoras</div><div class="uf-m-value ${det>0?'warn':'good'}">${det}</div></div>
     </div></div>`;
 }
@@ -756,12 +845,15 @@ function renderOverview() {
 
   const bG = bd?.byEntity?.Geral?.[selWeek]||{};
   const aG = ad?.byEntity?.Geral?.[selWeek]||{};
+  const prevWeek = selIdx > 0 ? weeks[selIdx-1] : null;
+  const bGp = prevWeek ? bd?.byEntity?.Geral?.[prevWeek]||{} : {};
+  const aGp = prevWeek ? ad?.byEntity?.Geral?.[prevWeek]||{} : {};
 
   document.getElementById('ov-kpis').innerHTML =
-    kpiCard('Bundle CSAT', bG.csat??null, null, META.csat, false, 'blue') +
-    kpiCard('Bundle NPS',  bG.nps??null, '%', META.nps, false, 'blue') +
-    kpiCard('Avulso CSAT', aG.csat??null, null, META.csat) +
-    kpiCard('Avulso NPS',  aG.nps??null, '%', META.nps);
+    kpiCard('Bundle CSAT', bG.csat??null, null, META.csat, false, 'blue', bG.csat&&bGp.csat?{v:bG.csat-bGp.csat}:null) +
+    kpiCard('Bundle NPS',  bG.nps??null,  '%', META.nps,  false, 'blue', bG.nps&&bGp.nps?{v:bG.nps-bGp.nps}:null) +
+    kpiCard('Avulso CSAT', aG.csat??null, null, META.csat, false, '',    aG.csat&&aGp.csat?{v:aG.csat-aGp.csat}:null) +
+    kpiCard('Avulso NPS',  aG.nps??null,  '%', META.nps,  false, '',    aG.nps&&aGp.nps?{v:aG.nps-aGp.nps}:null);
 
   const bL = bd ? bd.weeks.map(w=>w.replace('_',' ')) : [];
   lineChart('ov-csat-chart', bL, [
@@ -801,13 +893,15 @@ function renderJornada(j) {
 
   const g = data.byEntity.Geral?.[week]||{};
   const pg = idx>0 ? data.byEntity.Geral?.[data.weeks[idx-1]]||{} : {};
-  const dC = g.csat&&pg.csat ? ((g.csat-pg.csat)>=0?'▲':'▼')+Math.abs(g.csat-pg.csat).toFixed(2)+' WoW' : '—';
-  const dN = g.nps&&pg.nps  ? ((g.nps-pg.nps)>=0?'▲':'▼')+Math.abs(g.nps-pg.nps).toFixed(1)+'pp WoW' : '—';
+  const dC = g.csat&&pg.csat ? ((g.csat-pg.csat)>=0?'&#9650;':'&#9660;')+Math.abs(g.csat-pg.csat).toFixed(2)+' WoW' : '&#8212;';
+  const dN = g.nps&&pg.nps  ? ((g.nps-pg.nps)>=0?'&#9650;':'&#9660;')+Math.abs(g.nps-pg.nps).toFixed(1)+'pp WoW' : '&#8212;';
+  const wowQtd = g.qtd&&pg.qtd ? (g.qtd-pg.qtd) : null;
+  const wowQtdHtml = wowQtd!==null ? `<span class="kpi-tag kpi-wow ${wowQtd>=0?'wow-up':'wow-down'}">${wowQtd>=0?'+':''}${wowQtd} WoW</span>` : '';
 
   document.getElementById(`${j}-kpis`).innerHTML =
-    kpiCard('CSAT Geral', g.csat??null, null, META.csat) +
-    kpiCard('NPS Geral', g.nps??null, '%', META.nps) +
-    `<div class="kpi blue"><div class="kpi-label">Avaliações</div><div class="kpi-value">${g.qtd||0}</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">${dC}</span></div></div>` +
+    kpiCard('CSAT Geral', g.csat??null, null, META.csat, false, '', g.csat&&pg.csat?{v:g.csat-pg.csat}:null) +
+    kpiCard('NPS Geral',  g.nps??null,  '%', META.nps,  false, '', g.nps&&pg.nps?{v:g.nps-pg.nps}:null) +
+    `<div class="kpi blue"><div class="kpi-label">Avaliações</div><div class="kpi-value">${g.qtd||0}</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">${dC}</span>${wowQtdHtml}</div></div>` +
     `<div class="kpi purple"><div class="kpi-label">NPS WoW</div><div class="kpi-value" style="font-size:18px">${dN}</div></div>`;
 
   const col = j==='bundle'?C.blue:C.orange;
@@ -817,8 +911,13 @@ function renderJornada(j) {
   lineChart(`${j}-nps-trend`, labels, [{label:'NPS', data:data.weeks.map(w=>data.byEntity.Geral?.[w]?.nps??null), borderColor:col, tension:.4,
     pointBackgroundColor:data.weeks.map(w=>{const v=data.byEntity.Geral?.[w]?.nps; return v&&v<META.nps?C.red:col;}), pointRadius:4}], -20, 110, v=>v+'%');
 
+  const prevWeek = idx>0 ? data.weeks[idx-1] : null;
   const ufs = Object.keys(data.byEntity).filter(k=>k!=='Geral'&&data.byEntity[k][week]).sort((a,b)=>data.byEntity[b][week].qtd-data.byEntity[a][week].qtd);
-  document.getElementById(`${j}-uf-grid`).innerHTML = ufs.map(u=>{const d=data.byEntity[u][week]; return ufCard(u,d.csat,d.nps,d.qtd,d.det);}).join('') || '<div class="no-data">Sem dados</div>';
+  document.getElementById(`${j}-uf-grid`).innerHTML = ufs.map(u=>{
+    const d=data.byEntity[u][week];
+    const p=prevWeek?data.byEntity[u]?.[prevWeek]:null;
+    return ufCard(u,d.csat,d.nps,d.qtd,d.det,p);
+  }).join('') || '<div class="no-data">Sem dados</div>';
 }
 
 // ─────────────────────────────────────────────
@@ -837,14 +936,17 @@ function renderState(sk) {
   const stId = {sp:'SP',rj:'RJ',mg:'MG'}[sk];
   const g = ufData.byEntity[stId]?.[week]||{};
   const pg = idx>0 ? ufData.byEntity[stId]?.[ufData.weeks[idx-1]]||{} : {};
-  const dC = g.csat&&pg.csat ? ((g.csat-pg.csat)>=0?'▲':'▼')+Math.abs(g.csat-pg.csat).toFixed(2)+' WoW' : '—';
+  const dC = g.csat&&pg.csat ? ((g.csat-pg.csat)>=0?'&#9650;':'&#9660;')+Math.abs(g.csat-pg.csat).toFixed(2)+' WoW' : '&#8212;';
+  const wowQtd = g.qtd&&pg.qtd ? (g.qtd-pg.qtd) : null;
+  const wowQtdHtml = wowQtd!==null ? `<span class="kpi-tag kpi-wow ${wowQtd>=0?'wow-up':'wow-down'}">${wowQtd>=0?'+':''}${wowQtd} WoW</span>` : '';
 
   document.getElementById(`${sk}-kpis`).innerHTML =
-    kpiCard(`${stId} CSAT`, g.csat??null, null, META.csat) +
-    kpiCard(`${stId} NPS`, g.nps??null, '%', META.nps) +
-    `<div class="kpi blue"><div class="kpi-label">Avaliações</div><div class="kpi-value">${g.qtd||0}</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">${dC}</span></div></div>` +
-    `<div class="kpi ${(g.det||0)>0?'warn':''}"><div class="kpi-label">Detratoras</div><div class="kpi-value">${g.det||0}</div></div>`;
+    kpiCard(`${stId} CSAT`, g.csat??null, null, META.csat, false, '', g.csat&&pg.csat?{v:g.csat-pg.csat}:null) +
+    kpiCard(`${stId} NPS`,  g.nps??null,  '%', META.nps,  false, '', g.nps&&pg.nps?{v:g.nps-pg.nps}:null) +
+    `<div class="kpi blue"><div class="kpi-label">Avaliações</div><div class="kpi-value">${g.qtd||0}</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">${dC}</span>${wowQtdHtml}</div></div>` +
+    `<div class="kpi ${(g.det||0)>0?'warn':''}"><div class="kpi-label">Detratoras</div><div class="kpi-value">${g.det||0}</div><div class="kpi-meta">${pg.det!==undefined?`<span class="kpi-tag kpi-wow ${(g.det-pg.det)<=0?'wow-up':'wow-down'}">${(g.det-pg.det)<=0?'&#9660;':'&#9650;'}${Math.abs((g.det||0)-(pg.det||0))} WoW</span>`:'</div>'}</div>`;
 
+  const prevWeek = idx>0 ? ufData.weeks[idx-1] : null;
   const cities = Object.keys(data.byEntity).filter(k=>data.byEntity[k][week]).sort((a,b)=>data.byEntity[b][week].qtd-data.byEntity[a][week].qtd).slice(0,10);
   const csats = cities.map(c=>data.byEntity[c][week].csat);
   const npss  = cities.map(c=>data.byEntity[c][week].nps);
@@ -853,7 +955,62 @@ function renderState(sk) {
   barChart(`${sk}-csat-bar`, lbl, [{data:csats, borderRadius:5, backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 0, 5);
   barChart(`${sk}-nps-bar`,  lbl, [{data:npss,  borderRadius:5, backgroundColor:npss.map(v=>v>=META.nps?'rgba(77,159,255,.7)':v>=META.nps-15?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], -20, 110, v=>v+'%');
 
-  document.getElementById(`${sk}-cidade-grid`).innerHTML = cities.map(c=>{const d=data.byEntity[c][week]; return ufCard(c,d.csat,d.nps,d.qtd,d.det);}).join('') || '<div class="no-data">Sem dados</div>';
+  document.getElementById(`${sk}-cidade-grid`).innerHTML = cities.map(c=>{
+    const d=data.byEntity[c][week];
+    const p=prevWeek?data.byEntity[c]?.[prevWeek]:null;
+    return ufCard(c,d.csat,d.nps,d.qtd,d.det,p);
+  }).join('') || '<div class="no-data">Sem dados</div>';
+
+  if (sk === 'sp') renderSPHistory();
+}
+
+// ─────────────────────────────────────────────
+// SP HISTORY TOP 10
+// ─────────────────────────────────────────────
+function renderSPHistory() {
+  const fileKey = ST.spHistJornada === 'avulso' ? 'spAvulso' : 'spBundle';
+  const data = ST.data[fileKey]?.[1];
+  if (!data) return;
+
+  // Top 10 by total avaliações across all weeks
+  const totals = {};
+  Object.keys(data.byEntity).forEach(city => {
+    totals[city] = Object.values(data.byEntity[city]).reduce((s,w)=>s+(w.qtd||0),0);
+  });
+  const top10 = Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,10).map(e=>e[0]);
+  const labels = data.weeks.map(w=>w.replace('_',' '));
+  const palette = ['#00d68f','#4d9fff','#ff8c42','#ffc107','#a855f7','#ff4757','#00bcd4','#8bc34a','#ff69b4','#ff9800'];
+
+  const mkDatasets = (metric) => [
+    ...top10.map((city,i) => ({
+      label: city.length>16 ? city.slice(0,14)+'…' : city,
+      data: data.weeks.map(w=>data.byEntity[city]?.[w]?.[metric]??null),
+      borderColor: palette[i], backgroundColor:'transparent',
+      tension:.4, pointRadius:3, pointHoverRadius:6, borderWidth:2, spanGaps:true,
+    })),
+    {
+      label: metric==='csat' ? `Meta ${META.csat}` : `Meta ${META.nps}%`,
+      data: data.weeks.map(()=> metric==='csat' ? META.csat : META.nps),
+      borderColor:'rgba(255,71,87,.5)', borderDash:[6,3], borderWidth:1, pointRadius:0, tension:0,
+    }
+  ];
+
+  const baseOpts = () => {
+    const o = cDef();
+    o.plugins.legend.position = 'bottom';
+    o.plugins.legend.labels = { color:C.muted, font:{family:'DM Mono',size:9}, boxWidth:10, padding:8 };
+    return o;
+  };
+
+  if (ST.charts['sp-hist-csat']) ST.charts['sp-hist-csat'].destroy();
+  const co = baseOpts(); co.scales.y.min=1; co.scales.y.max=5;
+  const csatEl = document.getElementById('sp-hist-csat');
+  if (csatEl) ST.charts['sp-hist-csat'] = new Chart(csatEl.getContext('2d'),{type:'line',data:{labels,datasets:mkDatasets('csat')},options:co});
+
+  if (ST.charts['sp-hist-nps']) ST.charts['sp-hist-nps'].destroy();
+  const no = baseOpts(); no.scales.y.min=-20; no.scales.y.max=110; no.scales.y.ticks.callback=v=>v+'%';
+  const npsEl = document.getElementById('sp-hist-nps');
+  if (npsEl) ST.charts['sp-hist-nps'] = new Chart(npsEl.getContext('2d'),{type:'line',data:{labels,datasets:mkDatasets('nps')},options:no});
 }
 
 // ─────────────────────────────────────────────
@@ -915,16 +1072,196 @@ window.filterCidades = () => {
       <td class="num neutral">${c.pros}</td>
       <td class="num neutral">${c.prosAtivos}</td>
       <td class="num neutral">${c.servD30.toLocaleString('pt-BR')}</td>
-      <td class="num neutral">${c.jobPro??'—'}</td>
-      <td class="num ${gC(c.openInc,META.open,true)}">${c.openInc!==null?c.openInc.toFixed(1)+'%':'—'}</td>
-      <td class="num ${gC(c.openReal,META.open,true)}">${c.openReal!==null?c.openReal.toFixed(1)+'%':'—'}</td>
-      <td class="num ${gC(c.noshowInc,5,true)}">${c.noshowInc!==null?c.noshowInc.toFixed(2)+'%':'—'}</td>
-      <td class="num ${gC(c.noshowReal,5,true)}">${c.noshowReal!==null?c.noshowReal.toFixed(2)+'%':'—'}</td>
-      <td class="num ${gC(c.resolucao,70,false)}">${c.resolucao!==null?c.resolucao.toFixed(1)+'%':'—'}</td>
-      <td class="num ${gC(c.csatD30,META.csat,false)}">${c.csatD30!==null?c.csatD30.toFixed(2):'—'}</td>
-      <td class="num ${gC(c.npsD30,META.nps,false)}">${c.npsD30!==null?c.npsD30.toFixed(1)+'%':'—'}</td>
+      <td class="num neutral">${c.jobPro??'&#8212;'}</td>
+      <td class="num ${gC(c.openInc,META.open,true)}">${c.openInc!==null?c.openInc.toFixed(1)+'%':'&#8212;'}</td>
+      <td class="num ${gC(c.openReal,META.open,true)}">${c.openReal!==null?c.openReal.toFixed(1)+'%':'&#8212;'}</td>
+      <td class="num ${gC(c.noshowInc,5,true)}">${c.noshowInc!==null?c.noshowInc.toFixed(2)+'%':'&#8212;'}</td>
+      <td class="num ${gC(c.noshowReal,5,true)}">${c.noshowReal!==null?c.noshowReal.toFixed(2)+'%':'&#8212;'}</td>
+      <td class="num ${gC(c.resolucao,70,false)}">${c.resolucao!==null?c.resolucao.toFixed(1)+'%':'&#8212;'}</td>
+      <td class="num ${gC(c.csatD30,META.csat,false)}">${c.csatD30!==null?c.csatD30.toFixed(2):'&#8212;'}</td>
+      <td class="num ${gC(c.npsD30,META.nps,false)}">${c.npsD30!==null?c.npsD30.toFixed(1)+'%':'&#8212;'}</td>
     </tr>`).join('');
 };
+
+
+// ─────────────────────────────────────────────
+// AI ANALYSIS — McKinsey Framework
+// ─────────────────────────────────────────────
+function buildAnalysisContext() {
+  // Collect all data to send to Claude
+  const ctx = { meta: META, semana: null, bundle: {}, avulso: {}, cidades: [] };
+
+  ['bundle','avulso'].forEach(j => {
+    const data = ST.data[j]?.[0];
+    if (!data) return;
+    const {week, idx} = getSel(j, data) || {};
+    if (!week) return;
+    if (!ctx.semana) ctx.semana = week;
+    const prevWeek = idx > 0 ? data.weeks[idx-1] : null;
+
+    ctx[j].semana = week;
+    ctx[j].geral = data.byEntity.Geral?.[week] || null;
+    ctx[j].geralPrev = prevWeek ? data.byEntity.Geral?.[prevWeek] || null : null;
+    ctx[j].ufs = [];
+
+    Object.entries(data.byEntity).forEach(([uf, weeks]) => {
+      if (uf === 'Geral') return;
+      const d = weeks[week];
+      if (!d || d.qtd < 3) return;
+      const prev = prevWeek ? weeks[prevWeek] : null;
+      ctx[j].ufs.push({
+        uf, csat: d.csat, nps: d.nps, qtd: d.qtd, det: d.det,
+        csatWow: prev?.csat ? +(d.csat - prev.csat).toFixed(2) : null,
+        npsWow:  prev?.nps  ? +(d.nps  - prev.nps ).toFixed(1) : null,
+        desvCsat: +(d.csat - META.csat).toFixed(2),
+        desvNps:  +(d.nps  - META.nps ).toFixed(1),
+        impacto: d.qtd * Math.max(0, META.csat - d.csat) // volume-weighted gap
+      });
+    });
+    ctx[j].ufs.sort((a,b) => b.impacto - a.impacto);
+  });
+
+  // Top cities by impact
+  const cities = ST.data.cidades || [];
+  if (cities.length) {
+    ctx.cidades = cities
+      .filter(c => c.csatD30 !== null && c.servD30 > 0)
+      .map(c => ({
+        cidade: c.cidade, uf: c.uf, risco: c.risco,
+        servD30: c.servD30, csatD30: c.csatD30, npsD30: c.npsD30,
+        openInc: c.openInc, openReal: c.openReal,
+        noshowInc: c.noshowInc, resolucao: c.resolucao,
+        impacto: c.servD30 * Math.max(0, META.csat - (c.csatD30||0))
+      }))
+      .sort((a,b) => b.impacto - a.impacto)
+      .slice(0, 20);
+  }
+
+  return ctx;
+}
+
+async function runAIAnalysis() {
+  var btn = document.getElementById('ai-refresh-btn');
+  var content = document.getElementById('ai-content');
+  var ts = document.getElementById('ai-timestamp');
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="ai-spinner"></div> Analisando...';
+  content.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div> A IA esta analisando os dados com o framework McKinsey...</div>';
+
+  var ctx = buildAnalysisContext();
+
+  var bundleGeralCsat  = ctx.bundle.geral  ? ctx.bundle.geral.csat.toFixed(2)  : 'n/d';
+  var bundleGeralNps   = ctx.bundle.geral  ? ctx.bundle.geral.nps.toFixed(1)   : 'n/d';
+  var bundleGeralQtd   = ctx.bundle.geral  ? ctx.bundle.geral.qtd              : 0;
+  var avulsoGeralCsat  = ctx.avulso.geral  ? ctx.avulso.geral.csat.toFixed(2)  : 'n/d';
+  var avulsoGeralNps   = ctx.avulso.geral  ? ctx.avulso.geral.nps.toFixed(1)   : 'n/d';
+  var avulsoGeralQtd   = ctx.avulso.geral  ? ctx.avulso.geral.qtd              : 0;
+
+  var bundleWowCsat = (ctx.bundle.geral && ctx.bundle.geralPrev)
+    ? (+(ctx.bundle.geral.csat - ctx.bundle.geralPrev.csat)).toFixed(2) : 'n/d';
+  var bundleWowNps = (ctx.bundle.geral && ctx.bundle.geralPrev)
+    ? (+(ctx.bundle.geral.nps  - ctx.bundle.geralPrev.nps )).toFixed(1) : 'n/d';
+
+  var bundleUfsLines = (ctx.bundle.ufs || []).slice(0, 8).map(function(u) {
+    return '  ' + u.uf + ': CSAT ' + u.csat + ' (desvio ' + (u.desvCsat >= 0 ? '+' : '') + u.desvCsat
+      + '), NPS ' + u.nps + '% (desvio ' + (u.desvNps >= 0 ? '+' : '') + u.desvNps + 'pp)'
+      + ', ' + u.qtd + ' aval., WoW CSAT ' + (u.csatWow !== null ? u.csatWow : 'n/d');
+  }).join('\n');
+
+  var avulsoUfsLine = (ctx.avulso.ufs || []).slice(0, 5).map(function(u) {
+    return u.uf + ': CSAT ' + u.csat + ', NPS ' + u.nps + '%, ' + u.qtd + ' aval.';
+  }).join(' | ');
+
+  var cidadesLines = ctx.cidades.slice(0, 12).map(function(c, i) {
+    return '  ' + (i + 1) + '. ' + c.cidade + '/' + c.uf
+      + ': CSAT ' + c.csatD30
+      + ', NPS ' + (c.npsD30 !== null ? c.npsD30.toFixed(1) : 'n/d') + '%'
+      + ', ' + c.servD30 + ' servicos'
+      + ', Open ' + (c.openInc !== null ? c.openInc.toFixed(1) : 'n/d') + '%'
+      + ', NoShow ' + (c.noshowInc !== null ? c.noshowInc.toFixed(2) : 'n/d') + '%';
+  }).join('\n');
+
+  var semana = ctx.semana || 'atual';
+
+  var promptLines = [
+    'Voce e um consultor senior da McKinsey especializado em operacoes de marketplace de servicos.',
+    'Analise os dados operacionais abaixo e produza uma analise critica estruturada em 4 secoes,',
+    'respondendo estritamente em HTML usando as classes CSS ja disponiveis no dashboard.',
+    '',
+    'SEMANA ANALISADA: ' + semana,
+    'METAS: CSAT >= ' + META.csat + ' | NPS >= ' + META.nps + '% | Open < ' + META.open + '%',
+    '',
+    'BUNDLE - Geral: CSAT ' + bundleGeralCsat + ' (WoW ' + bundleWowCsat + '), NPS ' + bundleGeralNps + '% (WoW ' + bundleWowNps + 'pp), ' + bundleGeralQtd + ' avaliacoes',
+    'UFs Bundle (por impacto volume x gap):',
+    bundleUfsLines,
+    '',
+    'AVULSO - Geral: CSAT ' + avulsoGeralCsat + ', NPS ' + avulsoGeralNps + '%, ' + avulsoGeralQtd + ' avaliacoes',
+    'UFs Avulso: ' + avulsoUfsLine,
+    '',
+    'TOP CIDADES POR IMPACTO (volume x gap vs meta):',
+    cidadesLines,
+    '',
+    '---',
+    'Produza HTML com EXATAMENTE esta estrutura (nao use markdown, apenas HTML puro):',
+    '',
+    '<div class="ai-sections">',
+    '<div class="ai-section">',
+    '<div class="ai-section-header"><span class="ai-section-icon">&#x1F4CA;</span><span class="ai-section-title">Matriz de Risco - Impacto x Volume</span></div>',
+    '<div class="ai-section-body">',
+    'Liste os 5 principais riscos priorizados por impacto real (volume x desvio vs meta).',
+    'Para cada item use etiqueta CRITICO ou ATENCAO. Seja especifico com os numeros dos dados. Explique POR QUE o impacto e maior.',
+    '</div></div>',
+    '<div class="ai-section">',
+    '<div class="ai-section-header"><span class="ai-section-icon">&#x1F50D;</span><span class="ai-section-title">Hipoteses de Causa-Raiz</span></div>',
+    '<div class="ai-section-body">',
+    'Para cada risco principal apresente hipoteses em arvore logica com bullets. Categorize por: Qualidade do PRO / Alocacao / Experiencia do cliente / Processo.',
+    '</div></div>',
+    '<div class="ai-section">',
+    '<div class="ai-section-header"><span class="ai-section-icon">&#x2753;</span><span class="ai-section-title">Perguntas Diagnostico - MECE</span></div>',
+    '<div class="ai-section-body">',
+    '8 a 10 perguntas MECE para o time. Organize por: QUALIDADE, COBERTURA, PROCESSO.',
+    '</div></div>',
+    '<div class="ai-section">',
+    '<div class="ai-section-header"><span class="ai-section-icon">&#x26A1;</span><span class="ai-section-title">Acoes Recomendadas - Priorizadas</span></div>',
+    '<div class="ai-section-body">',
+    '5 a 7 acoes priorizadas. Para cada uma: urgencia (URGENTE / CURTO PRAZO / MEDIO PRAZO), owner sugerido, prazo e metrica de sucesso.',
+    '</div></div>',
+    '</div>',
+    '',
+    'Use dados reais. Seja direto e especifico. Escreva os textos em portugues do Brasil.'
+  ];
+
+  var prompt = promptLines.join('\n');
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    var data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    var html = data.content.map(function(b) { return b.text || ''; }).join('');
+    html = html.replace(/^```html?\n?/, '').replace(/\n?```$/, '').trim();
+
+    content.innerHTML = html;
+    ts.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    btn.innerHTML = '* Atualizar analise';
+    btn.disabled = false;
+
+  } catch(e) {
+    content.innerHTML = '<div class="ai-error">Erro ao gerar analise: ' + e.message + '<br><br>Verifique se os dados foram carregados e tente novamente.</div>';
+    btn.innerHTML = '* Tentar novamente';
+    btn.disabled = false;
+  }
+}
 
 // ─────────────────────────────────────────────
 // ALERTS
