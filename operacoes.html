@@ -159,10 +159,19 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .desvio.warn{border-left-color:var(--yellow)}
 .desvio-icon{font-size:14px;flex-shrink:0;margin-top:1px}
 .desvio-body{flex:1;min-width:0}
-.desvio-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
-.desvio-desc{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
-.desvio-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--red);flex-shrink:0}
+.desvio-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px}
+.desvio-desc{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:5px}
+.desvio-metrics{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.desvio-metric{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid var(--border)}
+.desvio-metric.bad{background:rgba(255,71,87,.1);color:var(--red);border-color:rgba(255,71,87,.2)}
+.desvio-metric.warn{background:rgba(255,193,7,.1);color:var(--yellow);border-color:rgba(255,193,7,.2)}
+.desvio-metric.ok{background:rgba(0,214,143,.1);color:var(--green);border-color:rgba(0,214,143,.2)}
+.desvio-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.desvio-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--red)}
 .desvio.warn .desvio-val{color:var(--yellow)}
+.desvio-vol{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.desvio-rank{font-size:9px;background:rgba(255,71,87,.15);color:var(--red);padding:1px 5px;border-radius:3px;font-weight:700}
+.desvio.warn .desvio-rank{background:rgba(255,193,7,.15);color:var(--yellow)}
 
 /* CITY TABLE */
 .search-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
@@ -874,32 +883,41 @@ function renderOverview() {
     {label:'Avulso', data:ad?ad.weeks.map(w=>ad.byEntity.Geral?.[w]?.nps??null):[], borderColor:C.orange, tension:.4, borderDash:[4,2], pointRadius:3}
   ], -20, 110, v=>v+'%');
 
-  if (bd) {
-    // Use the last week that has data for Bundle UFs
-    const bdWeeks = bd.weeks || [];
-    let useWeek = selWeek;
-    // Walk back from selWeek until we find a week with UF data
-    for (let wi = bdWeeks.indexOf(selWeek); wi >= 0; wi--) {
+  // CSAT por UF: try section [0] first (UFs), fall back to [1]
+  const bdUF = ST.data.bundle?.[0] || ST.data.bundle?.[1];
+  if (bdUF) {
+    const bdWeeks = bdUF.weeks || [];
+    // Find most recent week with any non-Geral entity having CSAT data
+    let useWeek = null;
+    for (let wi = bdWeeks.length - 1; wi >= 0; wi--) {
       const w = bdWeeks[wi];
-      const hasData = Object.keys(bd.byEntity).some(k => k !== 'Geral' && bd.byEntity[k][w]?.csat);
+      const hasData = Object.keys(bdUF.byEntity).some(k => {
+        const kl = k.toLowerCase();
+        return kl !== 'geral' && kl !== 'wow' && bdUF.byEntity[k][w]?.csat;
+      });
       if (hasData) { useWeek = w; break; }
     }
-    const ufs = Object.keys(bd.byEntity)
-      .filter(k => k !== 'Geral' && bd.byEntity[k][useWeek]?.csat)
-      .sort((a, b) => (bd.byEntity[b][useWeek].csat || 0) - (bd.byEntity[a][useWeek].csat || 0));
-    const csats = ufs.map(u => bd.byEntity[u][useWeek].csat);
-    if (ufs.length) {
-      barChart('ov-uf-csat', ufs, [{data:csats, borderRadius:5,
-        backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 3.8, 5.05);
+    if (!useWeek && bdWeeks.length) useWeek = bdWeeks[bdWeeks.length - 1];
+    if (useWeek) {
+      const ufs = Object.keys(bdUF.byEntity)
+        .filter(k => { const kl = k.toLowerCase(); return kl !== 'geral' && kl !== 'wow' && bdUF.byEntity[k][useWeek]?.csat; })
+        .sort((a, b) => (bdUF.byEntity[b][useWeek].csat || 0) - (bdUF.byEntity[a][useWeek].csat || 0));
+      const csats = ufs.map(u => bdUF.byEntity[u][useWeek].csat);
+      if (ufs.length) {
+        barChart('ov-uf-csat', ufs, [{data:csats, borderRadius:5,
+          backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 3.8, 5.05);
+      } else {
+        // Debug: show what entities are available
+        console.warn('ov-uf-csat: no UF data for week', useWeek, 'entities:', Object.keys(bdUF.byEntity).slice(0,10));
+      }
     }
+  } else {
+    console.warn('ov-uf-csat: ST.data.bundle =', ST.data.bundle);
   }
 
-  const alerts = buildAlerts();
-  document.getElementById('ov-alertas-mini').innerHTML = alerts.slice(0,4).map(a=>
-    `<div class="desvio ${a.t==='w'?'warn':''}"><div class="desvio-icon">${a.icon}</div>
-    <div class="desvio-body"><div class="desvio-title">${a.title}</div><div class="desvio-desc">${a.desc}</div></div>
-    <div class="desvio-val">${a.val}</div></div>`
-  ).join('') || '<div class="no-data" style="padding:16px;font-size:11px">✅ Sem alertas ativos</div>';
+  const alerts = buildAlerts().map((a, i) => { a._rank = i + 1; return a; });
+  document.getElementById('ov-alertas-mini').innerHTML = alerts.slice(0,4).map(alertCard).join('')
+    || '<div class="no-data" style="padding:16px;font-size:11px">OK Sem alertas ativos</div>';
 }
 
 // ─────────────────────────────────────────────
@@ -1289,37 +1307,130 @@ async function runAIAnalysis() {
 // ─────────────────────────────────────────────
 function buildAlerts() {
   const alerts = [];
+
+  // --- CSAT / NPS from Bundle & Avulso UF/Geral ---
   ['bundle','avulso'].forEach(j => {
     const data = ST.data[j]?.[0];
     if (!data) return;
-    const {week} = getSel(j,data)||{};
+    const {week} = getSel(j, data) || {};
     if (!week) return;
     Object.entries(data.byEntity).forEach(([entity, wks]) => {
-      const d = wks[week]; if (!d) return;
-      if (d.csat < META.csat) alerts.push({t:d.csat<META.csat-.5?'c':'w', icon:d.csat<META.csat-.5?'🔴':'🟡',
-        title:`[${j.toUpperCase()}] ${entity} — CSAT baixo`, desc:`${d.csat.toFixed(2)} (meta ${META.csat}) · ${d.qtd} avaliações`, val:(d.csat-META.csat).toFixed(2)});
-      if (d.nps!==null && d.nps<META.nps) alerts.push({t:d.nps<0?'c':'w', icon:d.nps<0?'🔴':'🟡',
-        title:`[${j.toUpperCase()}] ${entity} — NPS baixo`, desc:`${d.nps.toFixed(1)}% (meta ${META.nps}%)`, val:(d.nps-META.nps).toFixed(1)+'pp'});
+      const d = wks[week];
+      if (!d || !d.qtd) return;
+      const csatDev = d.csat - META.csat;
+      const npsDev  = d.nps !== null ? d.nps - META.nps : null;
+      // Impact score = volume * severity
+      const csatImpact = csatDev < 0 ? d.qtd * Math.abs(csatDev) : 0;
+      const npsImpact  = npsDev !== null && npsDev < 0 ? d.qtd * Math.abs(npsDev) / 10 : 0;
+      if (csatDev < 0) {
+        alerts.push({
+          t: csatDev < -0.3 ? 'c' : 'w',
+          impact: csatImpact,
+          icon: csatDev < -0.3 ? '🔴' : '🟡',
+          title: '[' + j.toUpperCase() + '] ' + entity + ' — CSAT abaixo da meta',
+          desc: d.qtd + ' aval./semana',
+          val: (csatDev >= 0 ? '+' : '') + csatDev.toFixed(2),
+          metrics: [
+            { label: 'CSAT ' + d.csat.toFixed(2), cls: csatDev < -0.3 ? 'bad' : 'warn' },
+            { label: 'NPS ' + (d.nps !== null ? d.nps.toFixed(1) + '%' : 'n/d'), cls: npsDev !== null && npsDev < 0 ? (npsDev < -20 ? 'bad' : 'warn') : 'ok' },
+            { label: d.qtd + ' aval.', cls: '' },
+          ]
+        });
+      }
+      if (npsDev !== null && npsDev < 0 && csatDev >= 0) {
+        // Only add NPS alert if CSAT is OK (avoid double-alerting same entity)
+        alerts.push({
+          t: npsDev < -20 ? 'c' : 'w',
+          impact: npsImpact,
+          icon: npsDev < -20 ? '🔴' : '🟡',
+          title: '[' + j.toUpperCase() + '] ' + entity + ' — NPS abaixo da meta',
+          desc: d.qtd + ' aval./semana',
+          val: (npsDev >= 0 ? '+' : '') + npsDev.toFixed(1) + 'pp',
+          metrics: [
+            { label: 'NPS ' + d.nps.toFixed(1) + '%', cls: npsDev < -20 ? 'bad' : 'warn' },
+            { label: 'CSAT ' + d.csat.toFixed(2), cls: csatDev < 0 ? 'warn' : 'ok' },
+            { label: d.qtd + ' aval.', cls: '' },
+          ]
+        });
+      }
     });
   });
-  (ST.data.cidades||[]).forEach(c => {
-    if (c.openInc!==null && c.openInc>META.open) alerts.push({t:c.openInc>META.open*2?'c':'w', icon:'📭',
-      title:`${c.cidade} (${c.uf}) — Open acima da meta`, desc:`Open Inc.: ${c.openInc.toFixed(1)}% (meta <${META.open}%)`, val:'+'+(c.openInc-META.open).toFixed(1)+'%'});
+
+  // --- Open / NoShow / CSAT from Cidades ---
+  (ST.data.cidades || []).forEach(c => {
+    const serv = c.servD30 || 0;
+    const openDev    = c.openInc    !== null ? c.openInc    - META.open : null;
+    const noshowDev  = c.noshowInc  !== null ? c.noshowInc  - 5 : null; // meta noshow < 5%
+    const csatDev    = c.csatD30    !== null ? c.csatD30    - META.csat : null;
+
+    // Build composite impact: weighted by service volume
+    const openImpact   = openDev   > 0 ? serv * openDev   : 0;
+    const noshowImpact = noshowDev > 0 ? serv * noshowDev  : 0;
+    const csatImpact2  = csatDev   < 0 ? serv * Math.abs(csatDev) * 10 : 0;
+    const totalImpact  = openImpact + noshowImpact + csatImpact2;
+
+    // Only alert if at least one metric is off AND city has meaningful volume
+    const hasOpen   = openDev   !== null && openDev   > 0;
+    const hasNoshow = noshowDev !== null && noshowDev > 0;
+    const hasCsat   = csatDev   !== null && csatDev   < 0;
+
+    if ((hasOpen || hasNoshow || hasCsat) && serv >= 5) {
+      const severity = (openDev > META.open || (noshowDev !== null && noshowDev > 10) || csatDev < -0.3) ? 'c' : 'w';
+      const worstMetric = hasOpen ? 'Open ' + c.openInc.toFixed(1) + '%'
+        : hasNoshow ? 'NoShow ' + c.noshowInc.toFixed(1) + '%'
+        : 'CSAT ' + c.csatD30.toFixed(2);
+
+      alerts.push({
+        t: severity,
+        impact: totalImpact,
+        icon: severity === 'c' ? '🔴' : '🟡',
+        title: c.cidade + ' (' + c.uf + ') — ' + worstMetric,
+        desc: serv + ' serv. D-30',
+        val: hasOpen ? '+' + openDev.toFixed(1) + '% Open' : hasNoshow ? '+' + noshowDev.toFixed(1) + '% NS' : (csatDev >= 0 ? '+' : '') + csatDev.toFixed(2) + ' CSAT',
+        metrics: [
+          { label: 'CSAT ' + (c.csatD30 !== null ? c.csatD30.toFixed(2) : 'n/d'), cls: hasCsat ? (csatDev < -0.3 ? 'bad' : 'warn') : 'ok' },
+          { label: 'Open ' + (c.openInc !== null ? c.openInc.toFixed(1) + '%' : 'n/d'), cls: hasOpen ? (openDev > META.open ? 'bad' : 'warn') : 'ok' },
+          { label: 'NoShow ' + (c.noshowInc !== null ? c.noshowInc.toFixed(1) + '%' : 'n/d'), cls: hasNoshow ? (noshowDev > 10 ? 'bad' : 'warn') : 'ok' },
+          { label: serv + ' serv.', cls: '' },
+        ]
+      });
+    }
   });
-  alerts.sort((a,b)=>a.t==='c'?-1:1);
+
+  // Sort by impact score descending (critical first, then by volume*severity)
+  alerts.sort((a, b) => {
+    if (a.t !== b.t) return a.t === 'c' ? -1 : 1;
+    return b.impact - a.impact;
+  });
+
   const n = alerts.length;
   const badge = document.getElementById('badge-alertas');
-  if (badge) { badge.textContent=n; badge.style.display=n>0?'':'none'; }
+  if (badge) { badge.textContent = n; badge.style.display = n > 0 ? '' : 'none'; }
   return alerts;
 }
 
+function alertCard(a) {
+  const metricsHtml = (a.metrics || []).map(m =>
+    '<span class="desvio-metric ' + m.cls + '">' + m.label + '</span>'
+  ).join('');
+  return '<div class="desvio ' + (a.t === 'w' ? 'warn' : '') + '">' +
+    '<div class="desvio-icon">' + a.icon + '</div>' +
+    '<div class="desvio-body">' +
+      '<div class="desvio-title">' + a.title + '</div>' +
+      '<div class="desvio-desc">' + a.desc + '</div>' +
+      '<div class="desvio-metrics">' + metricsHtml + '</div>' +
+    '</div>' +
+    '<div class="desvio-right">' +
+      '<div class="desvio-val">' + a.val + '</div>' +
+      '<div class="desvio-vol">#' + (a._rank || '') + ' impacto</div>' +
+    '</div>' +
+  '</div>';
+}
+
 function renderAlertasPage() {
-  const alerts = buildAlerts();
-  document.getElementById('alertas-full').innerHTML = alerts.map(a=>
-    `<div class="desvio ${a.t==='w'?'warn':''}"><div class="desvio-icon">${a.icon}</div>
-    <div class="desvio-body"><div class="desvio-title">${a.title}</div><div class="desvio-desc">${a.desc}</div></div>
-    <div class="desvio-val">${a.val}</div></div>`
-  ).join('') || '<div class="no-data"><span class="icon">✅</span>Nenhum alerta ativo</div>';
+  const alerts = buildAlerts().map((a, i) => { a._rank = i + 1; return a; });
+  document.getElementById('alertas-full').innerHTML = alerts.map(alertCard).join('')
+    || '<div class="no-data"><span class="icon">OK</span>Nenhum alerta ativo</div>';
 }
 </script>
 </body>
