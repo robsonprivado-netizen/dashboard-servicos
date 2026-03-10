@@ -867,18 +867,31 @@ function renderOverview() {
   lineChart('ov-csat-chart', bL, [
     {label:'Bundle', data:bd?bd.weeks.map(w=>bd.byEntity.Geral?.[w]?.csat??null):[], borderColor:C.blue, backgroundColor:'rgba(77,159,255,.08)', tension:.4, fill:true, pointRadius:3},
     {label:'Avulso', data:ad?ad.weeks.map(w=>ad.byEntity.Geral?.[w]?.csat??null):[], borderColor:C.green, tension:.4, borderDash:[4,2], pointRadius:3}
-  ], 1, 5);
+  ], 3.8, 5.05);
 
   lineChart('ov-nps-chart', bL, [
     {label:'Bundle', data:bd?bd.weeks.map(w=>bd.byEntity.Geral?.[w]?.nps??null):[], borderColor:C.blue, backgroundColor:'rgba(77,159,255,.06)', tension:.4, fill:true, pointRadius:3},
     {label:'Avulso', data:ad?ad.weeks.map(w=>ad.byEntity.Geral?.[w]?.nps??null):[], borderColor:C.orange, tension:.4, borderDash:[4,2], pointRadius:3}
   ], -20, 110, v=>v+'%');
 
-  if (bd && selWeek) {
-    const ufs = Object.keys(bd.byEntity).filter(k=>k!=='Geral'&&bd.byEntity[k][selWeek]);
-    const csats = ufs.map(u=>bd.byEntity[u][selWeek].csat);
-    barChart('ov-uf-csat', ufs, [{data:csats, borderRadius:5,
-      backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 0, 5);
+  if (bd) {
+    // Use the last week that has data for Bundle UFs
+    const bdWeeks = bd.weeks || [];
+    let useWeek = selWeek;
+    // Walk back from selWeek until we find a week with UF data
+    for (let wi = bdWeeks.indexOf(selWeek); wi >= 0; wi--) {
+      const w = bdWeeks[wi];
+      const hasData = Object.keys(bd.byEntity).some(k => k !== 'Geral' && bd.byEntity[k][w]?.csat);
+      if (hasData) { useWeek = w; break; }
+    }
+    const ufs = Object.keys(bd.byEntity)
+      .filter(k => k !== 'Geral' && bd.byEntity[k][useWeek]?.csat)
+      .sort((a, b) => (bd.byEntity[b][useWeek].csat || 0) - (bd.byEntity[a][useWeek].csat || 0));
+    const csats = ufs.map(u => bd.byEntity[u][useWeek].csat);
+    if (ufs.length) {
+      barChart('ov-uf-csat', ufs, [{data:csats, borderRadius:5,
+        backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 3.8, 5.05);
+    }
   }
 
   const alerts = buildAlerts();
@@ -915,7 +928,7 @@ function renderJornada(j) {
   const col = j==='bundle'?C.blue:C.orange;
   const labels = data.weeks.map(w=>w.replace('_',' '));
   lineChart(`${j}-csat-trend`, labels, [{label:'CSAT', data:data.weeks.map(w=>data.byEntity.Geral?.[w]?.csat??null), borderColor:col, backgroundColor:'rgba(77,159,255,.06)', tension:.4, fill:true,
-    pointBackgroundColor:data.weeks.map(w=>{const v=data.byEntity.Geral?.[w]?.csat; return v&&v<META.csat?C.red:col;}), pointRadius:4}], 1, 5);
+    pointBackgroundColor:data.weeks.map(w=>{const v=data.byEntity.Geral?.[w]?.csat; return v&&v<META.csat?C.red:col;}), pointRadius:4}], 3.8, 5.05);
   lineChart(`${j}-nps-trend`, labels, [{label:'NPS', data:data.weeks.map(w=>data.byEntity.Geral?.[w]?.nps??null), borderColor:col, tension:.4,
     pointBackgroundColor:data.weeks.map(w=>{const v=data.byEntity.Geral?.[w]?.nps; return v&&v<META.nps?C.red:col;}), pointRadius:4}], -20, 110, v=>v+'%');
 
@@ -960,7 +973,7 @@ function renderState(sk) {
   const npss  = cities.map(c=>data.byEntity[c][week].nps);
   const lbl   = cities.map(c=>c.length>14?c.slice(0,12)+'…':c);
 
-  barChart(`${sk}-csat-bar`, lbl, [{data:csats, borderRadius:5, backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 0, 5);
+  barChart(`${sk}-csat-bar`, lbl, [{data:csats, borderRadius:5, backgroundColor:csats.map(v=>v>=META.csat?'rgba(0,214,143,.7)':v>=META.csat-.3?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], 3.8, 5.05);
   barChart(`${sk}-nps-bar`,  lbl, [{data:npss,  borderRadius:5, backgroundColor:npss.map(v=>v>=META.nps?'rgba(77,159,255,.7)':v>=META.nps-15?'rgba(255,193,7,.7)':'rgba(255,71,87,.7)')}], -20, 110, v=>v+'%');
 
   document.getElementById(`${sk}-cidade-grid`).innerHTML = cities.map(c=>{
@@ -1011,7 +1024,7 @@ function renderSPHistory() {
   };
 
   if (ST.charts['sp-hist-csat']) ST.charts['sp-hist-csat'].destroy();
-  const co = baseOpts(); co.scales.y.min=1; co.scales.y.max=5;
+  const co = baseOpts(); co.scales.y.min=3.8; co.scales.y.max=5.05;
   const csatEl = document.getElementById('sp-hist-csat');
   if (csatEl) ST.charts['sp-hist-csat'] = new Chart(csatEl.getContext('2d'),{type:'line',data:{labels,datasets:mkDatasets('csat')},options:co});
 
@@ -1243,7 +1256,7 @@ async function runAIAnalysis() {
   var prompt = promptLines.join('\n');
 
   try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    var res = await fetch('https://ms-ops-proxy.robson-privado.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
