@@ -1865,7 +1865,17 @@ function renderProsOverview() {
   var riscoLabels = ['Verde','Amarelo','Laranja','Vermelho','Sem CSAT'];
   var riscoVals   = [verdes, amarelos, laranjas, vermelhos, semCsat];
   var riscoColors = ['rgba(0,214,143,.75)','rgba(255,193,7,.75)','rgba(255,140,66,.75)','rgba(255,71,87,.85)','rgba(90,98,120,.5)'];
-  barChart('pros-risco-bar', riscoLabels, [{ data: riscoVals, borderRadius: 5, backgroundColor: riscoColors }], 0, Math.max.apply(null, riscoVals) * 1.15);
+  var riscoTotal = riscoVals.reduce(function(s,v){ return s+v; }, 0);
+  var riscoLabelsWithPct = riscoLabels.map(function(l, i) {
+    var pct = riscoTotal > 0 ? (riscoVals[i] / riscoTotal * 100).toFixed(1) : '0.0';
+    return l + ' (' + pct + '%)';
+  });
+  var riscoOpts = { scales: { y: { ticks: { callback: function(v){ return v; } } } },
+    plugins: { tooltip: { callbacks: { label: function(ctx) {
+      var pct = riscoTotal > 0 ? (ctx.parsed.y / riscoTotal * 100).toFixed(1) : '0.0';
+      return ' ' + ctx.parsed.y + ' PROs · ' + pct + '%';
+    }}}}};
+  barChart('pros-risco-bar', riscoLabelsWithPct, [{ data: riscoVals, borderRadius: 5, backgroundColor: riscoColors }], 0, Math.max.apply(null, riscoVals) * 1.15);
 
   // --- Produtividade ---
   if (prod.length) {
@@ -2029,15 +2039,28 @@ function renderProsMatriz() {
   if (ST.charts['matriz-donut']) ST.charts['matriz-donut'].destroy();
   var donutEl = document.getElementById('matriz-donut');
   if (donutEl) {
+    var totalVol = consGroups.reduce(function(s,g){ return s + g.volPros; }, 0);
     ST.charts['matriz-donut'] = new Chart(donutEl.getContext('2d'), {
       type: 'doughnut',
       data: {
-        labels: consGroups.map(function(g){ return g.name; }),
+        labels: consGroups.map(function(g){
+          var pct = totalVol > 0 ? (g.volPros / totalVol * 100).toFixed(1) : '0.0';
+          return g.name + ' (' + g.volPros + ' · ' + pct + '%)';
+        }),
         datasets: [{ data: consGroups.map(function(g){ return g.volPros; }),
           backgroundColor: consGroups.map(function(g){ return g.color; }),
           borderWidth: 1, borderColor: '#0c0e13' }]
       },
-      options: { plugins: { legend: { position: 'right', labels: { color: '#8892a4', font: { family: 'DM Mono', size: 9 }, boxWidth: 10 } } }, cutout: '65%' }
+      options: {
+        plugins: {
+          legend: { position: 'right', labels: { color: '#8892a4', font: { family: 'DM Mono', size: 9 }, boxWidth: 10 } },
+          tooltip: { callbacks: { label: function(ctx) {
+            var pct = totalVol > 0 ? (ctx.parsed / totalVol * 100).toFixed(1) : '0.0';
+            return ' ' + ctx.parsed + ' PROs · ' + pct + '%';
+          }}}
+        },
+        cutout: '65%'
+      }
     });
   }
 
