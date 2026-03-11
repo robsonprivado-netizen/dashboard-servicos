@@ -205,6 +205,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .anim{animation:fadeUp .35s ease both}
+/* PROS PAGES */
+.pros-risco-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;font-family:'Syne',sans-serif}
+.risco-verde{background:rgba(0,214,143,.15);color:var(--green)}
+.risco-amarelo{background:rgba(255,193,7,.15);color:var(--yellow)}
+.risco-laranja{background:rgba(255,140,66,.15);color:var(--orange)}
+.risco-vermelho{background:rgba(255,71,87,.15);color:var(--red)}
+.risco-sem{background:rgba(90,98,120,.15);color:var(--muted2)}
+
 /* AI ANALYSIS */
 .ai-analysis-wrap{background:linear-gradient(135deg,rgba(0,214,143,.04) 0%,rgba(77,159,255,.04) 100%);border:1px solid rgba(0,214,143,.2);border-radius:16px;padding:24px;margin-top:14px;position:relative;overflow:hidden}
 .ai-analysis-wrap::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),var(--blue),var(--purple))}
@@ -296,7 +304,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="sb-item" onclick="showPage('cidades',this)"><span class="icon">📍</span> Cidades</div>
 
     <div class="sb-divider"></div>
-    <button class="sb-refresh" onclick="loadAllSheets()">🔄 Atualizar dados</button>
+    <div class="sb-section">Profissionais</div>
+    <div class="sb-item" onclick="showPage('pros-overview',this)"><span class="icon">👷</span> PROs Overview</div>
+    <div class="sb-item" onclick="showPage('pros-matriz',this)"><span class="icon">🎯</span> Matriz</div>
+    <div class="sb-item" onclick="showPage('pros-detalhe',this)"><span class="icon">📋</span> PROs Detalhe</div>
+
+    <div class="sb-divider"></div>
+    <button class="sb-refresh" onclick="loadAllSheets().then(()=>loadAllSheets2())">🔄 Atualizar dados</button>
     <div class="sb-last-update" id="sb-last-update"></div>
   </nav>
 
@@ -471,6 +485,77 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
+
+    <!-- PROs OVERVIEW -->
+    <div id="page-pros-overview" class="page">
+      <div class="page-header">
+        <div><div class="page-title">PROs Overview</div><div class="page-subtitle">Base de profissionais · Performance e produtividade</div></div>
+      </div>
+      <div class="kpi-row cols-4" id="pros-kpis"></div>
+      <div class="sec-label">Distribuicao por Grupo de Risco</div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot"></span> Volume de PROs por Grupo de Risco</div><div class="chart-wrap h240"><canvas id="pros-risco-bar"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot blue"></span> Distribuicao de Produtividade (D-60)</div><div class="chart-wrap h240"><canvas id="pros-prod-bar"></canvas></div></div>
+      </div>
+      <div class="sec-label">Evolucao da Matriz de Performance</div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot"></span> Performance Geral WoW</div><div class="chart-wrap h240"><canvas id="pros-perf-geral"></canvas></div></div>
+        <div class="card">
+          <div class="card-title"><span class="dot blue"></span> Performance por Estado</div>
+          <div class="jornada-tabs" style="margin:8px 0 4px">
+            <button class="j-tab bundle active" id="perf-geral-btn" onclick="switchPerfEstado('Geral',this)">Geral</button>
+            <button class="j-tab avulso" id="perf-sp-btn" onclick="switchPerfEstado('Sao Paulo',this)">SP</button>
+            <button class="j-tab" id="perf-rj-btn" onclick="switchPerfEstado('Rio de Janeiro',this)" style="background:rgba(168,85,247,.1);color:var(--purple);border-color:rgba(168,85,247,.3)">RJ</button>
+          </div>
+          <div class="chart-wrap h200"><canvas id="pros-perf-estado"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROs MATRIZ -->
+    <div id="page-pros-matriz" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Matriz de Performance</div><div class="page-subtitle">Classificacao por CSAT x No Show · Evolucao semanal</div></div>
+        <div class="week-selector" id="matriz-weeks"></div>
+      </div>
+      <div class="kpi-row cols-4" id="matriz-kpis"></div>
+      <div class="sec-label">Quadrantes da Matriz</div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title"><span class="dot"></span> Distribuicao por Quadrante (% PROs)</div><div class="chart-wrap h260"><canvas id="matriz-donut"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot blue"></span> Evolucao dos Quadrantes WoW</div><div class="chart-wrap h260"><canvas id="matriz-linha"></canvas></div></div>
+      </div>
+      <div class="sec-label">Detalhe por Quadrante</div>
+      <div class="uf-grid" id="matriz-quadrantes"></div>
+    </div>
+
+    <!-- PROs DETALHE -->
+    <div id="page-pros-detalhe" class="page">
+      <div class="page-header">
+        <div><div class="page-title">PROs Detalhe</div><div class="page-subtitle">Base completa · 1.920 profissionais ativos</div></div>
+      </div>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="pros-search" placeholder="Buscar por nome, cidade ou UF..." oninput="filterPros()">
+        <button class="filter-btn active" onclick="setProsFilter('all',this)">Todos</button>
+        <button class="filter-btn" onclick="setProsFilter('verde',this)" style="color:var(--green)">Verde</button>
+        <button class="filter-btn" onclick="setProsFilter('amarelo',this)" style="color:var(--yellow)">Amarelo</button>
+        <button class="filter-btn" onclick="setProsFilter('laranja',this)" style="color:var(--orange)">Laranja</button>
+        <button class="filter-btn" onclick="setProsFilter('vermelho',this)" style="color:var(--red)">Vermelho</button>
+        <button class="filter-btn" onclick="setProsFilter('sem-csat',this)">Sem CSAT</button>
+      </div>
+      <div class="table-scroll">
+        <table class="city-table">
+          <thead><tr>
+            <th>CID</th><th>Nome</th><th>UF</th><th>Cidade</th><th>Categoria</th><th>Nivel</th>
+            <th>F D-30</th><th>F D-60</th><th>Futuros</th>
+            <th>NoShow 30</th><th>NoShow 60</th>
+            <th>CSAT Geral</th><th>CSAT D-30</th><th>Aval.</th>
+            <th>Grupo Risco</th><th>Prod. D-60</th>
+          </tr></thead>
+          <tbody id="pros-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <footer>
       <span>Madeira Serviços · Operações · CSAT ≥ 4,7 · NPS ≥ 70% · Open &lt; 10%</span>
       <span id="footer-info"></span>
@@ -484,6 +569,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 // ─────────────────────────────────────────────
 const CLIENT_ID = '425783911667-p3bia1nam87dsar3kutk9sq7u23prnku.apps.googleusercontent.com';
 const SHEET_ID  = '1qJ7w42YZ5f-aoZlQwihqpIkS-ACIeruoRUdheuJRayY';
+const SHEET_ID2 = '1c37VsI_9Ia8_bz8aqYXVDf0OTEu_RAivCf8Qd23auEE';
 const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets.readonly';
 const META      = { csat: 4.7, nps: 70, open: 10 };
 const C         = { green:'#00d68f', blue:'#4d9fff', orange:'#ff8c42', red:'#ff4757', yellow:'#ffc107', border:'#252b3a', bg:'#0c0e13', muted:'#5a6278' };
@@ -497,6 +583,13 @@ const SHEETS = {
   mg:         'MG - CSAT/NPS',
   cidades:    'Cidades - Montagem',
 };
+const SHEETS2 = {
+  prosControle:    'CONTROLE',
+  prosProd:        'Prod. PROs',
+  prosMatriz:      'WoW - Matriz',
+  prosVizMatriz:   'Visualizacao_Matriz',
+  prosWowBundle:   'WoW - PROs - Bundle',
+};
 
 // ─────────────────────────────────────────────
 // STATE
@@ -509,6 +602,10 @@ const ST = {
   spHistJornada: 'bundle',
   cityData: [],
   cityRiskFilter: 'all',
+  prosData: [],
+  prosRiskFilter: 'all',
+  prosSearchTerm: '',
+  perfEstado: 'Geral',
   charts: {},
 };
 
@@ -597,6 +694,7 @@ async function loadAllSheets() {
     hideLoading();
     renderPage('overview');
     buildAlerts();
+    loadAllSheets2();
   } catch(e) {
     hideLoading();
     if (e.message.includes('401')) {
@@ -729,7 +827,10 @@ function renderPage(id) {
     case 'sp':       renderState('sp'); break;
     case 'rj':       renderState('rj'); break;
     case 'mg':       renderState('mg'); break;
-    case 'cidades':  renderCidades(); break;
+    case 'cidades':        renderCidades(); break;
+    case 'pros-overview':  renderProsOverview(); break;
+    case 'pros-matriz':    renderProsMatriz(); break;
+    case 'pros-detalhe':   renderProsDetalhe(); break;
   }
 }
 
@@ -1445,6 +1546,438 @@ function renderAlertasPage() {
   document.getElementById('alertas-full').innerHTML = alerts.map(alertCard).join('')
     || '<div class="no-data"><span class="icon">OK</span>Nenhum alerta ativo</div>';
 }
+
+// =============================================================
+// PROS SHEETS LOADER
+// =============================================================
+async function fetchSheet2(sheetName) {
+  var range = encodeURIComponent(sheetName);
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID2 + '/values/' + range;
+  var res = await fetch(url, { headers: { Authorization: 'Bearer ' + ST.token } });
+  if (res.status === 401) { sessionStorage.removeItem('ms_ops_token'); ST.token = null; handleLogout(); throw new Error('401'); }
+  if (!res.ok) throw new Error('Erro ' + res.status + ' em ' + sheetName);
+  var json = await res.json();
+  return json.values || [];
+}
+
+async function loadAllSheets2() {
+  try {
+    var entries = Object.entries(SHEETS2);
+    for (var i = 0; i < entries.length; i++) {
+      var key = entries[i][0], name = entries[i][1];
+      try {
+        var rows = await fetchSheet2(name);
+        if (key === 'prosControle')    ST.data[key] = parseProsControle(rows);
+        else if (key === 'prosProd')   ST.data[key] = parseProdPros(rows);
+        else if (key === 'prosMatriz') ST.data[key] = parseProsMatriz(rows);
+        else if (key === 'prosVizMatriz') ST.data[key] = parseProsVizMatriz(rows);
+        else if (key === 'prosWowBundle') ST.data[key] = parseProsWow(rows);
+      } catch(e) { if (e.message === '401') return; console.warn('PROs sheet error:', name, e); }
+    }
+    console.log('PROs data loaded');
+  } catch(e) { console.warn('loadAllSheets2 error:', e); }
+}
+
+// =============================================================
+// PARSERS
+// =============================================================
+function pct(v) {
+  if (!v || v === '-') return null;
+  return parseFloat(v.replace('%','').replace(',','.')) || null;
+}
+
+function parseProsControle(rows) {
+  // Row 0 = group headers, Row 1 = col headers, Row 2+ = data
+  var headers = rows[1] || [];
+  var idx = function(name) { return headers.indexOf(name); };
+  return rows.slice(2).filter(function(r) { return r[0]; }).map(function(r) {
+    return {
+      cid:       r[0],
+      nome:      r[1],
+      status:    r[2],
+      categoria: r[3],
+      cidade:    r[4],
+      uf:        r[5],
+      fD30:      parseInt(r[8])  || 0,
+      fD60:      parseInt(r[11]) || 0,
+      fD90:      parseInt(r[14]) || 0,
+      futuros:   parseInt(r[7])  || 0,
+      grupoProd: r[17] || '-',
+      noShow30:  pct(r[18]),
+      noShow60:  pct(r[19]),
+      noShow90:  pct(r[20]),
+      csatGeral: pNum(r[24]),
+      csatD30:   pNum(r[25]),
+      csatD60:   pNum(r[26]),
+      csatD90:   pNum(r[27]),
+      avalGeral: parseInt(r[28]) || 0,
+      avalD30:   parseInt(r[29]) || 0,
+      grupoRisco: r[32] || '-',
+      reciclagens: parseInt(r[33]) || 0,
+      nivel:     r[36] || '-',
+    };
+  });
+}
+
+function parseProdPros(rows) {
+  var result = [];
+  rows.slice(2).forEach(function(r) {
+    if (!r[3] || !r[4]) return;
+    var label = r[3];
+    var pros  = parseInt(r[4]) || 0;
+    var pct   = r[5] || '0%';
+    var prod  = r[14] || '';
+    if (pros > 0) result.push({ label: label, pros: pros, pct: pct, prod: prod });
+  });
+  return result;
+}
+
+function parseProsMatriz(rows) {
+  // Header row 1, data from row 2
+  // Columns: 1=week, 2=cadastrados, 3=ativos, 4=%ativos, 5=servD60
+  // Quadrantes start col 7: each has 5 cols (%pros, volPros, servD60, %serv, reciclagem, csatMedio)
+  // Actually header: col7=Vermelho(Baixo/Alto) %PROs, 8=VolPROs, 9=ServD60, 10=%Serv, 11=Reciclagem, 12=CSAT
+  var QUADS = [
+    { name: 'Vermelho B/A', color: '#ff4757', startCol: 7 },
+    { name: 'Vermelho M/A', color: '#ff6b81', startCol: 13 },
+    { name: 'Vermelho A/A', color: '#ff8fa3', startCol: 19 },
+    { name: 'Laranja',      color: '#ff8c42', startCol: 25 },
+    { name: 'Amarelo',      color: '#ffc107', startCol: 31 },
+    { name: 'Verde',        color: '#00d68f', startCol: 37 },
+    { name: 'Sem CSAT/A',   color: '#5a6278', startCol: 43 },
+    { name: 'Sem CSAT/B',   color: '#8892a4', startCol: 49 },
+  ];
+  var weeks = [];
+  var byWeek = {};
+  rows.slice(2).forEach(function(r) {
+    var wk = r[1];
+    if (!wk || wk === 'Alta' || wk === 'Media' || wk === 'Baixa' || wk === 'Muito Baixa' || wk === 'Medias') return;
+    if (wk.match(/^\d{2}_\d{2}$/)) {
+      weeks.push(wk);
+      byWeek[wk] = {
+        cadastrados: parseInt(r[2]) || 0,
+        ativos:      parseInt(r[3]) || 0,
+        pctAtivos:   pct(r[4]),
+        servD60:     parseInt(r[5]) || 0,
+        quads: {}
+      };
+      QUADS.forEach(function(q) {
+        byWeek[wk].quads[q.name] = {
+          pctPros: pct(r[q.startCol]),
+          volPros: parseInt(r[q.startCol+1]) || 0,
+          csat:    pNum(r[q.startCol+5] || r[q.startCol+4]),
+          color:   q.color
+        };
+      });
+    }
+  });
+  return { weeks: weeks, byWeek: byWeek, quads: QUADS };
+}
+
+function parseProsVizMatriz(rows) {
+  // Groups separated by header rows containing 'WoW -'
+  var sections = [];
+  var curSection = null;
+  rows.forEach(function(r) {
+    if (!r[1] || !r[1].trim()) return;
+    if (r[1].startsWith('WoW -')) {
+      var weeks = r.slice(2).filter(function(v) { return v && v.match(/^\d{2}_\d{2}$/); });
+      curSection = { title: r[1].replace('WoW - ',''), weeks: weeks, rows: [] };
+      sections.push(curSection);
+    } else if (curSection) {
+      var vals = r.slice(2, 2 + curSection.weeks.length).map(function(v) { return pct(v); });
+      curSection.rows.push({ label: r[1], values: vals });
+    }
+  });
+  return sections;
+}
+
+function parseProsWow(rows) {
+  if (!rows.length) return [];
+  // Row 0 = week headers (cols 5,9,13... every 4), Row 1 = sub-headers
+  var weekRow = rows[0];
+  var weeks = [];
+  var weekCols = [];
+  for (var c = 5; c < weekRow.length; c += 4) {
+    var v = weekRow[c];
+    if (v && v.match(/^\d{2}_\d{2}$/)) { weeks.push(v); weekCols.push(c); }
+    else if (v === 'Geral') break;
+  }
+  return rows.slice(2).filter(function(r) { return r[0]; }).map(function(r) {
+    var history = {};
+    weeks.forEach(function(w, wi) {
+      var c = weekCols[wi];
+      var csat = pNum(r[c]);
+      if (csat !== null) {
+        history[w] = {
+          csat:      csat,
+          aval:      parseInt(r[c+1]) || 0,
+          noshow:    pct(r[c+2]),
+          finalizados: parseInt(r[c+3]) || 0,
+        };
+      }
+    });
+    // Find Geral col (after last week)
+    var geralCol = weekCols[weeks.length - 1] + 4 + 1; // skip blank
+    return {
+      cid:       r[0],
+      nome:      r[1],
+      uf:        r[2],
+      cidade:    r[3],
+      categoria: r[4],
+      weeks:     weeks,
+      history:   history,
+      csatGeral: pNum(r[geralCol]),
+      csatD30:   pNum(r[geralCol+1]),
+      csatD60:   pNum(r[geralCol+2]),
+      reciclagem: parseInt(r[geralCol+4]) || 0,
+    };
+  });
+}
+
+// =============================================================
+// RENDER PROS OVERVIEW
+// =============================================================
+function renderProsOverview() {
+  var pros = ST.data.prosControle || [];
+  var prod = ST.data.prosProd || [];
+  if (!pros.length) {
+    document.getElementById('pros-kpis').innerHTML = '<div class="no-data" style="grid-column:1/-1">Dados de PROs nao carregados</div>';
+    return;
+  }
+
+  // KPIs
+  var total = pros.length;
+  var comCsat = pros.filter(function(p) { return p.csatGeral !== null; });
+  var avgCsat = comCsat.length ? comCsat.reduce(function(s,p) { return s + p.csatGeral; }, 0) / comCsat.length : null;
+  var semCsat = pros.filter(function(p) { return p.csatGeral === null; }).length;
+  var verdes = pros.filter(function(p) { return p.grupoRisco.startsWith('Verde'); }).length;
+  var vermelhos = pros.filter(function(p) { return p.grupoRisco.startsWith('Vermelho'); }).length;
+
+  document.getElementById('pros-kpis').innerHTML =
+    '<div class="kpi blue"><div class="kpi-label">Total PROs Ativos</div><div class="kpi-value">' + total + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">base ativa</span></div></div>' +
+    kpiCard('CSAT Medio', avgCsat, null, META.csat) +
+    '<div class="kpi"><div class="kpi-label">Verdes (Alto Perf.)</div><div class="kpi-value good">' + verdes + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(0,214,143,.1);color:var(--green)">' + Math.round(verdes/total*100) + '%</span></div></div>' +
+    '<div class="kpi warn"><div class="kpi-label">Vermelhos (Criticos)</div><div class="kpi-value bad">' + vermelhos + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(255,71,87,.1);color:var(--red)">' + Math.round(vermelhos/total*100) + '% da base</span></div></div>';
+
+  // Risco bar chart
+  var riscoMap = {};
+  pros.forEach(function(p) {
+    var g = p.grupoRisco;
+    var key = g.startsWith('Verde') ? 'Verde' : g.startsWith('Amarelo') ? 'Amarelo' : g.startsWith('Laranja') ? 'Laranja' : g.startsWith('Vermelho') ? 'Vermelho' : 'Sem CSAT/Dados';
+    riscoMap[key] = (riscoMap[key] || 0) + 1;
+  });
+  var riscoLabels = ['Verde','Amarelo','Laranja','Vermelho','Sem CSAT/Dados'];
+  var riscoVals = riscoLabels.map(function(k) { return riscoMap[k] || 0; });
+  var riscoColors = ['rgba(0,214,143,.7)','rgba(255,193,7,.7)','rgba(255,140,66,.7)','rgba(255,71,87,.7)','rgba(90,98,120,.5)'];
+  barChart('pros-risco-bar', riscoLabels, [{ data: riscoVals, borderRadius: 5, backgroundColor: riscoColors }], 0, Math.max.apply(null, riscoVals) * 1.1);
+
+  // Produtividade bar
+  if (prod.length) {
+    var prodLabels = prod.map(function(p) { return p.label; });
+    var prodVals   = prod.map(function(p) { return p.pros; });
+    var prodColors = prodVals.map(function(_, i) {
+      var colors = ['rgba(255,71,87,.7)','rgba(255,140,66,.7)','rgba(255,193,7,.7)','rgba(77,159,255,.7)','rgba(0,214,143,.7)','rgba(0,214,143,.8)','rgba(0,214,143,.9)'];
+      return colors[Math.min(i, colors.length-1)];
+    });
+    barChart('pros-prod-bar', prodLabels, [{ data: prodVals, borderRadius: 5, backgroundColor: prodColors }], 0, Math.max.apply(null, prodVals) * 1.1);
+  }
+
+  // Performance WoW charts
+  renderPerfGeral();
+  renderPerfEstado(ST.perfEstado || 'Geral');
+}
+
+function renderPerfGeral() {
+  var viz = ST.data.prosVizMatriz || [];
+  var geral = viz.find(function(s) { return s.title === 'Geral'; });
+  if (!geral) return;
+  var labels = geral.weeks.map(function(w) { return w.replace('_',' '); });
+  var palette = { 'Alta Performance': C.green, 'Media Performance': C.yellow, 'Baixa Performance': C.red };
+  var datasets = geral.rows.map(function(row) {
+    var col = palette[row.label] || C.blue;
+    return { label: row.label, data: row.values, borderColor: col, backgroundColor: 'transparent', tension: 0.4, pointRadius: 4, borderWidth: 2 };
+  });
+  lineChart('pros-perf-geral', labels, datasets, 0, 100, function(v) { return v + '%'; });
+}
+
+window.switchPerfEstado = function(estado, btn) {
+  document.querySelectorAll('#page-pros-overview .j-tab').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  ST.perfEstado = estado;
+  renderPerfEstado(estado);
+};
+
+function renderPerfEstado(estado) {
+  var viz = ST.data.prosVizMatriz || [];
+  var titleMap = { 'Geral': 'Geral', 'Sao Paulo': 'Sao Paulo', 'Rio de Janeiro': 'Rio de Janeiro' };
+  var section = viz.find(function(s) { return s.title === titleMap[estado] || s.title.includes(estado); });
+  if (!section) return;
+  var labels = section.weeks.map(function(w) { return w.replace('_',' '); });
+  var palette = { 'Alta Performance': C.green, 'Media Performance': C.yellow, 'Baixa Performance': C.red };
+  var datasets = section.rows.map(function(row) {
+    var col = palette[row.label] || C.blue;
+    return { label: row.label, data: row.values, borderColor: col, backgroundColor: 'transparent', tension: 0.4, pointRadius: 4, borderWidth: 2 };
+  });
+  lineChart('pros-perf-estado', labels, datasets, 0, 100, function(v) { return v + '%'; });
+}
+
+// =============================================================
+// RENDER PROS MATRIZ
+// =============================================================
+function renderProsMatriz() {
+  var mData = ST.data.prosMatriz;
+  if (!mData || !mData.weeks.length) {
+    document.getElementById('matriz-kpis').innerHTML = '<div class="no-data" style="grid-column:1/-1">Dados da Matriz nao carregados</div>';
+    return;
+  }
+
+  var weeks = mData.weeks;
+  var selIdx = ST.selWeeks['pros-matriz'] !== undefined ? ST.selWeeks['pros-matriz'] : weeks.length - 1;
+  selIdx = Math.min(selIdx, weeks.length - 1);
+  var week = weeks[selIdx];
+  var prev = selIdx > 0 ? weeks[selIdx - 1] : null;
+  var d = mData.byWeek[week];
+  var dp = prev ? mData.byWeek[prev] : null;
+
+  weekTabs('matriz-weeks', weeks, selIdx, 'pros-matriz');
+
+  var wowAtivos = dp ? (d.ativos - dp.ativos) : null;
+  document.getElementById('matriz-kpis').innerHTML =
+    '<div class="kpi blue"><div class="kpi-label">Cadastrados</div><div class="kpi-value">' + d.cadastrados + '</div></div>' +
+    '<div class="kpi"><div class="kpi-label">Ativos</div><div class="kpi-value">' + d.ativos + '</div><div class="kpi-meta">' + (wowAtivos !== null ? '<span class="kpi-tag kpi-wow ' + (wowAtivos >= 0 ? 'wow-up' : 'wow-down') + '">' + (wowAtivos >= 0 ? '+' : '') + wowAtivos + ' WoW</span>' : '') + '</div></div>' +
+    '<div class="kpi"><div class="kpi-label">% Ativos</div><div class="kpi-value">' + (d.pctAtivos !== null ? d.pctAtivos.toFixed(1) + '%' : '-') + '</div></div>' +
+    '<div class="kpi blue"><div class="kpi-label">Servicos D-60</div><div class="kpi-value">' + (d.servD60 || '-') + '</div></div>';
+
+  // Donut chart
+  var quadNames = Object.keys(d.quads);
+  var quadVols  = quadNames.map(function(k) { return d.quads[k].volPros; });
+  var quadColors = quadNames.map(function(k) { return d.quads[k].color; });
+  if (ST.charts['matriz-donut']) ST.charts['matriz-donut'].destroy();
+  var donutEl = document.getElementById('matriz-donut');
+  if (donutEl) {
+    ST.charts['matriz-donut'] = new Chart(donutEl.getContext('2d'), {
+      type: 'doughnut',
+      data: { labels: quadNames, datasets: [{ data: quadVols, backgroundColor: quadColors, borderWidth: 1, borderColor: '#0c0e13' }] },
+      options: { plugins: { legend: { position: 'right', labels: { color: '#8892a4', font: { family: 'DM Mono', size: 9 }, boxWidth: 10 } } }, cutout: '65%' }
+    });
+  }
+
+  // Evolution line chart
+  var labels = weeks.map(function(w) { return w.replace('_',' '); });
+  var lineDS = mData.quads.filter(function(q) { return q.name === 'Verde' || q.name === 'Amarelo' || q.name === 'Laranja' || q.name === 'Vermelho B/A'; }).map(function(q) {
+    return {
+      label: q.name,
+      data: weeks.map(function(w) { return mData.byWeek[w] ? mData.byWeek[w].quads[q.name].volPros : null; }),
+      borderColor: q.color, backgroundColor: 'transparent', tension: 0.4, pointRadius: 3, borderWidth: 2, spanGaps: true
+    };
+  });
+  lineChart('matriz-linha', labels, lineDS, 0, null);
+
+  // Quadrant cards
+  document.getElementById('matriz-quadrantes').innerHTML = quadNames.map(function(k) {
+    var q = d.quads[k];
+    var qp = dp ? dp.quads[k] : null;
+    var wow = qp ? (q.volPros - qp.volPros) : null;
+    return '<div class="uf-card">' +
+      '<div class="uf-header"><div class="uf-name" style="font-size:11px">' + k + '</div>' +
+      '<div class="uf-badge" style="background:' + q.color + '22;color:' + q.color + '">' + q.volPros + ' PROs</div></div>' +
+      '<div class="uf-metrics">' +
+        '<div><div class="uf-m-label">% PROs</div><div class="uf-m-value">' + (q.pctPros !== null ? q.pctPros.toFixed(1) + '%' : '-') + '</div></div>' +
+        '<div><div class="uf-m-label">CSAT Medio</div><div class="uf-m-value ' + (q.csat && q.csat >= META.csat ? 'good' : q.csat ? 'bad' : '') + '">' + (q.csat !== null ? q.csat.toFixed(2) : '-') + '</div></div>' +
+        '<div><div class="uf-m-label">WoW PROs</div><div class="uf-m-value ' + (wow === null ? '' : wow >= 0 ? 'good' : 'bad') + '">' + (wow !== null ? (wow >= 0 ? '+' : '') + wow : '-') + '</div></div>' +
+      '</div></div>';
+  }).join('');
+}
+
+// =============================================================
+// RENDER PROS DETALHE
+// =============================================================
+function renderProsDetalhe() {
+  var pros = ST.data.prosControle || [];
+  ST.prosData = pros;
+  if (!pros.length) {
+    document.getElementById('pros-tbody').innerHTML = '<tr><td colspan="16" style="text-align:center;color:var(--muted);padding:24px">Dados nao carregados</td></tr>';
+    return;
+  }
+  filterPros();
+}
+
+function riscoClass(g) {
+  if (!g || g === '-') return 'risco-sem';
+  if (g.startsWith('Verde')) return 'risco-verde';
+  if (g.startsWith('Amarelo')) return 'risco-amarelo';
+  if (g.startsWith('Laranja')) return 'risco-laranja';
+  if (g.startsWith('Vermelho')) return 'risco-vermelho';
+  return 'risco-sem';
+}
+
+function riscoLabel(g) {
+  if (!g || g === '-') return g || '-';
+  if (g.startsWith('Verde')) return 'Verde';
+  if (g.startsWith('Amarelo')) return 'Amarelo';
+  if (g.startsWith('Laranja')) return 'Laranja';
+  if (g.startsWith('Vermelho')) return 'Vermelho';
+  return 'Sem CSAT';
+}
+
+window.filterPros = function() {
+  var search = (document.getElementById('pros-search').value || '').toLowerCase();
+  ST.prosSearchTerm = search;
+  var rf = ST.prosRiskFilter;
+  var pros = ST.prosData.filter(function(p) {
+    var matchSearch = !search ||
+      p.nome.toLowerCase().includes(search) ||
+      p.cidade.toLowerCase().includes(search) ||
+      p.uf.toLowerCase().includes(search) ||
+      p.cid.toString().includes(search);
+    var rg = p.grupoRisco.toLowerCase();
+    var matchRisk = rf === 'all' ? true :
+      rf === 'verde'   ? rg.startsWith('verde') :
+      rf === 'amarelo' ? rg.startsWith('amarelo') :
+      rf === 'laranja' ? rg.startsWith('laranja') :
+      rf === 'vermelho'? rg.startsWith('vermelho') :
+      rf === 'sem-csat'? (rg.startsWith('sem') || rg === '-') : true;
+    return matchSearch && matchRisk;
+  });
+
+  document.getElementById('pros-tbody').innerHTML = pros.slice(0, 500).map(function(p) {
+    var rc = riscoClass(p.grupoRisco);
+    var noshow = p.noShow30 !== null ? p.noShow30.toFixed(1) + '%' : '-';
+    var noshow60 = p.noShow60 !== null ? p.noShow60.toFixed(1) + '%' : '-';
+    var csat = p.csatGeral !== null ? p.csatGeral.toFixed(2) : '-';
+    var csatD30 = p.csatD30 !== null ? p.csatD30.toFixed(2) : '-';
+    var csatCls = p.csatGeral !== null ? (p.csatGeral >= META.csat ? 'good' : p.csatGeral >= META.csat - 0.3 ? 'warn' : 'bad') : '';
+    var nsCls   = p.noShow30 !== null ? (p.noShow30 <= 5 ? 'good' : p.noShow30 <= 10 ? 'warn' : 'bad') : '';
+    return '<tr>' +
+      '<td style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted)">' + p.cid + '</td>' +
+      '<td style="font-weight:600">' + p.nome + '</td>' +
+      '<td>' + p.uf + '</td>' +
+      '<td>' + p.cidade + '</td>' +
+      '<td style="font-size:10px;color:var(--muted2)">' + (p.categoria.length > 18 ? p.categoria.slice(0,16) + '...' : p.categoria) + '</td>' +
+      '<td style="font-size:10px">' + p.nivel + '</td>' +
+      '<td style="text-align:right">' + p.fD30 + '</td>' +
+      '<td style="text-align:right">' + p.fD60 + '</td>' +
+      '<td style="text-align:right;color:var(--blue)">' + p.futuros + '</td>' +
+      '<td class="' + nsCls + '" style="text-align:right">' + noshow + '</td>' +
+      '<td style="text-align:right;color:var(--muted2)">' + noshow60 + '</td>' +
+      '<td class="' + csatCls + '" style="text-align:right;font-weight:600">' + csat + '</td>' +
+      '<td class="' + csatCls + '" style="text-align:right">' + csatD30 + '</td>' +
+      '<td style="text-align:right;color:var(--muted2)">' + p.avalD30 + '</td>' +
+      '<td><span class="pros-risco-badge ' + rc + '">' + riscoLabel(p.grupoRisco) + '</span></td>' +
+      '<td style="font-size:10px;color:var(--muted2)">' + p.grupoProd + '</td>' +
+    '</tr>';
+  }).join('');
+};
+
+window.setProsFilter = function(filter, btn) {
+  document.querySelectorAll('#page-pros-detalhe .filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  ST.prosRiskFilter = filter;
+  filterPros();
+};
+
+
 </script>
 </body>
 </html>
