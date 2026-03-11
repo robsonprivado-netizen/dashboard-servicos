@@ -2130,7 +2130,7 @@ window.filterPros = function() {
       rf === 'amarelo' ? (p.isAnalise && rg.startsWith('amarelo')) :
       rf === 'laranja' ? (p.isAnalise && rg.startsWith('laranja')) :
       rf === 'vermelho'? (p.isAnalise && rg.startsWith('vermelho')) :
-      rf === 'sem-csat'? (p.isAnalise && (rg.startsWith('sem') || rg === '-')) : true;
+      rf === 'sem-csat'? (p.isAnalise && p.csatD60 === null) : true;
     return matchSearch && matchRisk;
   });
 
