@@ -306,6 +306,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="sb-divider"></div>
     <div class="sb-section">Profissionais</div>
     <div class="sb-item" onclick="showPage('pros-overview',this)"><span class="icon">👷</span> PROs Overview</div>
+    <div class="sb-item" onclick="showPage('pros-alertas',this)"><span class="icon">🚨</span> PROs Alertas <span class="badge" id="badge-pros-alertas">0</span></div>
     <div class="sb-item" onclick="showPage('pros-matriz',this)"><span class="icon">🎯</span> Matriz</div>
     <div class="sb-item" onclick="showPage('pros-detalhe',this)"><span class="icon">📋</span> PROs Detalhe</div>
 
@@ -489,25 +490,34 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <!-- PROs OVERVIEW -->
     <div id="page-pros-overview" class="page">
       <div class="page-header">
-        <div><div class="page-title">PROs Overview</div><div class="page-subtitle">Base de profissionais · Performance e produtividade</div></div>
+        <div><div class="page-title">PROs Overview</div><div class="page-subtitle">Base de profissionais · Performance, risco e produtividade</div></div>
       </div>
+
       <div class="kpi-row cols-4" id="pros-kpis"></div>
-      <div class="sec-label">Distribuicao por Grupo de Risco</div>
+
+      <div class="sec-label">Distribuição por Grupo de Risco</div>
       <div class="grid-2">
-        <div class="card"><div class="card-title"><span class="dot"></span> Volume de PROs por Grupo de Risco</div><div class="chart-wrap h240"><canvas id="pros-risco-bar"></canvas></div></div>
-        <div class="card"><div class="card-title"><span class="dot blue"></span> Distribuicao de Produtividade (D-60)</div><div class="chart-wrap h240"><canvas id="pros-prod-bar"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot"></span> Volume por Grupo de Risco</div><div class="chart-wrap h220"><canvas id="pros-risco-bar"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot blue"></span> Distribuição de Produtividade D-60 (serviços)</div><div class="chart-wrap h220"><canvas id="pros-prod-bar"></canvas></div></div>
       </div>
-      <div class="sec-label">Evolucao da Matriz de Performance</div>
+
+      <div class="sec-label">Resumo por Grupo</div>
+      <div class="uf-grid" id="pros-risco-cards"></div>
+
+      <div class="sec-label">Volume de PROs por UF (Top 8)</div>
+      <div class="card" style="margin-bottom:20px"><div class="chart-wrap h220"><canvas id="pros-uf-bar"></canvas></div></div>
+
+      <div class="sec-label">Evolução da Matriz de Performance</div>
       <div class="grid-2">
-        <div class="card"><div class="card-title"><span class="dot"></span> Performance Geral WoW</div><div class="chart-wrap h240"><canvas id="pros-perf-geral"></canvas></div></div>
+        <div class="card"><div class="card-title"><span class="dot"></span> Performance Geral WoW</div><div class="chart-wrap h220"><canvas id="pros-perf-geral"></canvas></div></div>
         <div class="card">
           <div class="card-title"><span class="dot blue"></span> Performance por Estado</div>
           <div class="jornada-tabs" style="margin:8px 0 4px">
             <button class="j-tab bundle active" id="perf-geral-btn" onclick="switchPerfEstado('Geral',this)">Geral</button>
-            <button class="j-tab avulso" id="perf-sp-btn" onclick="switchPerfEstado('Sao Paulo',this)">SP</button>
+            <button class="j-tab avulso" id="perf-sp-btn" onclick="switchPerfEstado('São Paulo',this)">SP</button>
             <button class="j-tab" id="perf-rj-btn" onclick="switchPerfEstado('Rio de Janeiro',this)" style="background:rgba(168,85,247,.1);color:var(--purple);border-color:rgba(168,85,247,.3)">RJ</button>
           </div>
-          <div class="chart-wrap h200"><canvas id="pros-perf-estado"></canvas></div>
+          <div class="chart-wrap h180"><canvas id="pros-perf-estado"></canvas></div>
         </div>
       </div>
     </div>
@@ -556,6 +566,39 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </div>
 
+
+    <!-- PROs ALERTAS -->
+    <div id="page-pros-alertas" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">PROs Alertas</div>
+          <div class="page-subtitle">Profissionais priorizados por impacto · Volume × Desvio CSAT/No-show</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="filter-btn active" id="pros-alert-filter-all" onclick="setProsAlertFilter('all',this)">Todos</button>
+          <button class="filter-btn" id="pros-alert-filter-csat" onclick="setProsAlertFilter('csat_vol',this)">CSAT + Volume</button>
+          <button class="filter-btn" id="pros-alert-filter-noshow" onclick="setProsAlertFilter('noshow',this)">No-show</button>
+          <button class="filter-btn" id="pros-alert-filter-conf" onclick="setProsAlertFilter('alta_conf',this)">Alta Confiança</button>
+        </div>
+      </div>
+
+      <div class="kpi-row cols-4" id="pros-alert-kpis"></div>
+
+      <div class="sec-label">Distribuição do No-show</div>
+      <div class="grid-2" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-title"><span class="dot red"></span> Faixas de No-show (D-30)</div>
+          <div class="chart-wrap h200"><canvas id="pros-ns-faixas"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot yellow"></span> Desvio vs Média da Base</div>
+          <div id="pros-ns-desvio-wrap" style="padding:8px 0"></div>
+        </div>
+      </div>
+
+      <div class="sec-label">Ranking de PROs por Impacto <span id="pros-alert-count" style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px"></span></div>
+      <div id="pros-alertas-list"></div>
+    </div>
     <footer>
       <span>Madeira Serviços · Operações · CSAT ≥ 4,7 · NPS ≥ 70% · Open &lt; 10%</span>
       <span id="footer-info"></span>
@@ -587,7 +630,7 @@ const SHEETS2 = {
   prosControle:    'CONTROLE',
   prosProd:        'Prod. PROs',
   prosMatriz:      'WoW - Matriz',
-  prosVizMatriz:   'Visualizacao_Matriz',
+  prosVizMatriz:   'Visualização_Matriz',
   prosWowBundle:   'WoW - PROs - Bundle',
 };
 
@@ -829,6 +872,7 @@ function renderPage(id) {
     case 'mg':       renderState('mg'); break;
     case 'cidades':        renderCidades(); break;
     case 'pros-overview':  renderProsOverview(); break;
+    case 'pros-alertas':   renderProsAlertasPage(); break;
     case 'pros-matriz':    renderProsMatriz(); break;
     case 'pros-detalhe':   renderProsDetalhe(); break;
   }
@@ -880,11 +924,14 @@ function lineChart(id, labels, datasets, yMin, yMax, yCb) {
   mkChart(id, { type:'line', data:{labels,datasets}, options:opts });
 }
 
-function barChart(id, labels, datasets, yMin, yMax, yCb) {
+function barChart(id, labels, datasets, yMin, yMax, yCb, stacked) {
   const opts = cDef();
-  opts.plugins.legend.display = false;
-  opts.scales.y.min = yMin; opts.scales.y.max = yMax;
+  opts.plugins.legend.display = datasets.length > 1;
+  opts.plugins.legend.labels = { color:'#8892a4', font:{family:'DM Mono',size:9}, boxWidth:8 };
+  opts.scales.y.min = yMin!=null ? yMin : undefined;
+  if (yMax!=null) opts.scales.y.max = yMax;
   if (yCb) opts.scales.y.ticks.callback = yCb;
+  if (stacked) { opts.scales.x.stacked = true; opts.scales.y.stacked = true; }
   mkChart(id, { type:'bar', data:{labels,datasets}, options:opts });
 }
 
@@ -1575,6 +1622,7 @@ async function loadAllSheets2() {
       } catch(e) { if (e.message === '401') return; console.warn('PROs sheet error:', name, e); }
     }
     console.log('PROs data loaded');
+    buildProsAlerts();
   } catch(e) { console.warn('loadAllSheets2 error:', e); }
 }
 
@@ -1633,59 +1681,72 @@ function parseProdPros(rows) {
 }
 
 function parseProsMatriz(rows) {
-  // Header row 1, data from row 2
-  // Columns: 1=week, 2=cadastrados, 3=ativos, 4=%ativos, 5=servD60
-  // Quadrantes start col 7: each has 5 cols (%pros, volPros, servD60, %serv, reciclagem, csatMedio)
-  // Actually header: col7=Vermelho(Baixo/Alto) %PROs, 8=VolPROs, 9=ServD60, 10=%Serv, 11=Reciclagem, 12=CSAT
+  // Col layout per quadrant (startCol = %PROs col):
+  // startCol+0 = %PROs, +1 = VolPROs, +2 = ServD60, +3 = %Serv, +4 = Reciclagem, +5 = CSAT
   var QUADS = [
-    { name: 'Vermelho B/A', color: '#ff4757', startCol: 7 },
-    { name: 'Vermelho M/A', color: '#ff6b81', startCol: 13 },
-    { name: 'Vermelho A/A', color: '#ff8fa3', startCol: 19 },
-    { name: 'Laranja',      color: '#ff8c42', startCol: 25 },
-    { name: 'Amarelo',      color: '#ffc107', startCol: 31 },
-    { name: 'Verde',        color: '#00d68f', startCol: 37 },
-    { name: 'Sem CSAT/A',   color: '#5a6278', startCol: 43 },
-    { name: 'Sem CSAT/B',   color: '#8892a4', startCol: 49 },
+    { name: 'Vermelho B/A', label: 'Vermelho\nBaixo CSAT / Alto NS', color: '#ff4757', pctCol: 7,  volCol: 8,  csatCol: 12 },
+    { name: 'Vermelho M/A', label: 'Vermelho\nMedio CSAT / Alto NS',  color: '#ff6b81', pctCol: 13, volCol: 14, csatCol: 18 },
+    { name: 'Vermelho A/A', label: 'Vermelho\nAlto CSAT / Alto NS',   color: '#ff8fa3', pctCol: 19, volCol: 20, csatCol: 24 },
+    { name: 'Laranja',      label: 'Laranja\nBaixo CSAT / Baixo NS', color: '#ff8c42', pctCol: 25, volCol: 26, csatCol: 30 },
+    { name: 'Amarelo',      label: 'Amarelo\nMedio CSAT / Baixo NS', color: '#ffc107', pctCol: 31, volCol: 32, csatCol: 36 },
+    { name: 'Verde',        label: 'Verde\nAlto CSAT / Baixo NS',    color: '#00d68f', pctCol: 37, volCol: 38, csatCol: 42 },
+    { name: 'Sem CSAT/A',   label: 'Sem CSAT\nAlto No Show',         color: '#5a6278', pctCol: 43, volCol: 44, csatCol: 48 },
+    { name: 'Sem CSAT/B',   label: 'Sem CSAT\nBaixo No Show',        color: '#8892a4', pctCol: 49, volCol: 50, csatCol: 54 },
   ];
   var weeks = [];
   var byWeek = {};
-  rows.slice(2).forEach(function(r) {
+  var inGeral = false;
+  rows.forEach(function(r) {
     var wk = r[1];
-    if (!wk || wk === 'Alta' || wk === 'Media' || wk === 'Baixa' || wk === 'Muito Baixa' || wk === 'Medias') return;
-    if (wk.match(/^\d{2}_\d{2}$/)) {
-      weeks.push(wk);
-      byWeek[wk] = {
-        cadastrados: parseInt(r[2]) || 0,
-        ativos:      parseInt(r[3]) || 0,
-        pctAtivos:   pct(r[4]),
-        servD60:     parseInt(r[5]) || 0,
-        quads: {}
+    if (!wk) return;
+    // Detect section headers
+    if (wk === 'WoW - Geral') { inGeral = true; return; }
+    if (wk.startsWith('WoW -') && wk !== 'WoW - Geral') { inGeral = false; return; }
+    if (!inGeral) return;
+    // Skip non-week rows
+    if (!wk.match(/^\d{2}_\d{2}$/)) return;
+    if (byWeek[wk]) return; // skip duplicate
+    weeks.push(wk);
+    byWeek[wk] = {
+      cadastrados: parseInt(r[2]) || 0,
+      ativos:      parseInt(r[3]) || 0,
+      pctAtivos:   pct(r[4]),
+      servD60:     parseInt(r[5]) || 0,
+      quads: {}
+    };
+    QUADS.forEach(function(q) {
+      byWeek[wk].quads[q.name] = {
+        pctPros: pct(r[q.pctCol]),
+        volPros: parseInt(r[q.volCol]) || 0,
+        csat:    pNum(r[q.csatCol]),
+        color:   q.color,
+        label:   q.label
       };
-      QUADS.forEach(function(q) {
-        byWeek[wk].quads[q.name] = {
-          pctPros: pct(r[q.startCol]),
-          volPros: parseInt(r[q.startCol+1]) || 0,
-          csat:    pNum(r[q.startCol+5] || r[q.startCol+4]),
-          color:   q.color
-        };
-      });
-    }
+    });
   });
   return { weeks: weeks, byWeek: byWeek, quads: QUADS };
 }
 
 function parseProsVizMatriz(rows) {
-  // Groups separated by header rows containing 'WoW -'
   var sections = [];
   var curSection = null;
   rows.forEach(function(r) {
     if (!r[1] || !r[1].trim()) return;
+    // Section header: "WoW - Geral", "WoW - São Paulo", etc.
     if (r[1].startsWith('WoW -')) {
-      var weeks = r.slice(2).filter(function(v) { return v && v.match(/^\d{2}_\d{2}$/); });
-      curSection = { title: r[1].replace('WoW - ',''), weeks: weeks, rows: [] };
+      // weeks are in r[2], r[3], r[4]... until non-week value
+      var weeks = [];
+      for (var i = 2; i < r.length; i++) {
+        if (r[i] && r[i].match(/^\d{2}_\d{2}$/)) weeks.push(r[i]);
+      }
+      var title = r[1].replace('WoW - ','').trim();
+      curSection = { title: title, weeks: weeks, rows: [] };
       sections.push(curSection);
-    } else if (curSection) {
-      var vals = r.slice(2, 2 + curSection.weeks.length).map(function(v) { return pct(v); });
+    } else if (curSection && r[1].includes('Performance')) {
+      var vals = [];
+      for (var i = 0; i < curSection.weeks.length; i++) {
+        vals.push(pct(r[2 + i]));
+      }
       curSection.rows.push({ label: r[1], values: vals });
     }
   });
@@ -1741,49 +1802,111 @@ function parseProsWow(rows) {
 function renderProsOverview() {
   var pros = ST.data.prosControle || [];
   var prod = ST.data.prosProd || [];
+  var mData = ST.data.prosMatriz;
   if (!pros.length) {
     document.getElementById('pros-kpis').innerHTML = '<div class="no-data" style="grid-column:1/-1">Dados de PROs nao carregados</div>';
     return;
   }
 
-  // KPIs
+  // --- KPIs principais ---
   var total = pros.length;
   var comCsat = pros.filter(function(p) { return p.csatGeral !== null; });
   var avgCsat = comCsat.length ? comCsat.reduce(function(s,p) { return s + p.csatGeral; }, 0) / comCsat.length : null;
-  var semCsat = pros.filter(function(p) { return p.csatGeral === null; }).length;
-  var verdes = pros.filter(function(p) { return p.grupoRisco.startsWith('Verde'); }).length;
+  var verdes    = pros.filter(function(p) { return p.grupoRisco.startsWith('Verde'); }).length;
   var vermelhos = pros.filter(function(p) { return p.grupoRisco.startsWith('Vermelho'); }).length;
+  var amarelos  = pros.filter(function(p) { return p.grupoRisco.startsWith('Amarelo'); }).length;
+  var laranjas  = pros.filter(function(p) { return p.grupoRisco.startsWith('Laranja'); }).length;
+  var semCsat   = pros.filter(function(p) { return p.csatGeral === null || p.grupoRisco.startsWith('Sem'); }).length;
 
-  document.getElementById('pros-kpis').innerHTML =
-    '<div class="kpi blue"><div class="kpi-label">Total PROs Ativos</div><div class="kpi-value">' + total + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">base ativa</span></div></div>' +
-    kpiCard('CSAT Medio', avgCsat, null, META.csat) +
-    '<div class="kpi"><div class="kpi-label">Verdes (Alto Perf.)</div><div class="kpi-value good">' + verdes + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(0,214,143,.1);color:var(--green)">' + Math.round(verdes/total*100) + '%</span></div></div>' +
-    '<div class="kpi warn"><div class="kpi-label">Vermelhos (Criticos)</div><div class="kpi-value bad">' + vermelhos + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(255,71,87,.1);color:var(--red)">' + Math.round(vermelhos/total*100) + '% da base</span></div></div>';
-
-  // Risco bar chart
-  var riscoMap = {};
-  pros.forEach(function(p) {
-    var g = p.grupoRisco;
-    var key = g.startsWith('Verde') ? 'Verde' : g.startsWith('Amarelo') ? 'Amarelo' : g.startsWith('Laranja') ? 'Laranja' : g.startsWith('Vermelho') ? 'Vermelho' : 'Sem CSAT/Dados';
-    riscoMap[key] = (riscoMap[key] || 0) + 1;
-  });
-  var riscoLabels = ['Verde','Amarelo','Laranja','Vermelho','Sem CSAT/Dados'];
-  var riscoVals = riscoLabels.map(function(k) { return riscoMap[k] || 0; });
-  var riscoColors = ['rgba(0,214,143,.7)','rgba(255,193,7,.7)','rgba(255,140,66,.7)','rgba(255,71,87,.7)','rgba(90,98,120,.5)'];
-  barChart('pros-risco-bar', riscoLabels, [{ data: riscoVals, borderRadius: 5, backgroundColor: riscoColors }], 0, Math.max.apply(null, riscoVals) * 1.1);
-
-  // Produtividade bar
-  if (prod.length) {
-    var prodLabels = prod.map(function(p) { return p.label; });
-    var prodVals   = prod.map(function(p) { return p.pros; });
-    var prodColors = prodVals.map(function(_, i) {
-      var colors = ['rgba(255,71,87,.7)','rgba(255,140,66,.7)','rgba(255,193,7,.7)','rgba(77,159,255,.7)','rgba(0,214,143,.7)','rgba(0,214,143,.8)','rgba(0,214,143,.9)'];
-      return colors[Math.min(i, colors.length-1)];
-    });
-    barChart('pros-prod-bar', prodLabels, [{ data: prodVals, borderRadius: 5, backgroundColor: prodColors }], 0, Math.max.apply(null, prodVals) * 1.1);
+  // Ativos do Matriz (ultima semana)
+  var mAtivos = 0, mCadastrados = 0;
+  if (mData && mData.weeks.length) {
+    var lastWk = mData.weeks[mData.weeks.length-1];
+    mAtivos = mData.byWeek[lastWk].ativos;
+    mCadastrados = mData.byWeek[lastWk].cadastrados;
   }
 
-  // Performance WoW charts
+  document.getElementById('pros-kpis').innerHTML =
+    '<div class="kpi blue"><div class="kpi-label">Cadastrados</div><div class="kpi-value">' + (mCadastrados||total) + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">' + mAtivos + ' ativos (' + (mCadastrados ? Math.round(mAtivos/mCadastrados*100) : 0) + '%)</span></div></div>' +
+    kpiCard('CSAT Medio Base', avgCsat, null, META.csat) +
+    '<div class="kpi good"><div class="kpi-label">Verdes</div><div class="kpi-value good">' + verdes + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(0,214,143,.1);color:var(--green)">' + Math.round(verdes/total*100) + '% da base</span></div></div>' +
+    '<div class="kpi warn"><div class="kpi-label">Criticos (Vermelho)</div><div class="kpi-value bad">' + vermelhos + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(255,71,87,.1);color:var(--red)">' + Math.round(vermelhos/total*100) + '% da base</span></div></div>';
+
+  // --- Risco breakdown detalhado ---
+  var riscoLabels = ['Verde','Amarelo','Laranja','Vermelho B/A','Vermelho M/A','Vermelho A/A','Sem CSAT'];
+  var riscoMap = { 'Verde': verdes, 'Amarelo': amarelos, 'Laranja': laranjas, 'Sem CSAT': semCsat };
+  pros.forEach(function(p) {
+    var g = p.grupoRisco;
+    if (g.startsWith('Vermelho (Baixo'))  riscoMap['Vermelho B/A'] = (riscoMap['Vermelho B/A']||0)+1;
+    else if (g.startsWith('Vermelho (Médio') || g.startsWith('Vermelho (Medio')) riscoMap['Vermelho M/A'] = (riscoMap['Vermelho M/A']||0)+1;
+    else if (g.startsWith('Vermelho (Alto'))  riscoMap['Vermelho A/A'] = (riscoMap['Vermelho A/A']||0)+1;
+  });
+  var riscoVals   = riscoLabels.map(function(k) { return riscoMap[k] || 0; });
+  var riscoColors = ['rgba(0,214,143,.75)','rgba(255,193,7,.75)','rgba(255,140,66,.75)','rgba(255,71,87,.85)','rgba(255,107,129,.75)','rgba(255,143,163,.65)','rgba(90,98,120,.5)'];
+  barChart('pros-risco-bar', riscoLabels, [{ data: riscoVals, borderRadius: 5, backgroundColor: riscoColors }], 0, Math.max.apply(null, riscoVals) * 1.15);
+
+  // --- Produtividade ---
+  if (prod.length) {
+    var prodData = prod.filter(function(p) { return p.pros > 0; });
+    var prodLabels = prodData.map(function(p) { return p.label; });
+    var prodVals   = prodData.map(function(p) { return p.pros; });
+    var prodPcts   = prodData.map(function(p) { return p.pct; });
+    var prodColors = ['rgba(255,71,87,.8)','rgba(255,140,66,.8)','rgba(255,193,7,.8)','rgba(77,159,255,.8)','rgba(0,214,143,.8)','rgba(0,214,143,.9)','rgba(0,214,143,1)'];
+    barChart('pros-prod-bar', prodLabels,
+      [{ data: prodVals, borderRadius: 5, backgroundColor: prodColors.slice(0, prodVals.length),
+         label: 'PROs' }],
+      0, Math.max.apply(null, prodVals) * 1.15);
+  }
+
+  // --- Cards de resumo por grupo de risco ---
+  var riscoSummary = [
+    { key: 'Verde',    label: 'Verde', color: '#00d68f', count: verdes,    filter: 'verde' },
+    { key: 'Amarelo',  label: 'Amarelo', color: '#ffc107', count: amarelos,  filter: 'amarelo' },
+    { key: 'Laranja',  label: 'Laranja', color: '#ff8c42', count: laranjas,  filter: 'laranja' },
+    { key: 'Vermelho', label: 'Vermelho', color: '#ff4757', count: vermelhos, filter: 'vermelho' },
+    { key: 'Sem',      label: 'Sem CSAT', color: '#5a6278', count: semCsat,   filter: 'sem-csat' },
+  ];
+  var riscoCards = riscoSummary.map(function(g) {
+    var gpros = pros.filter(function(p) {
+      if (g.key === 'Sem') return p.csatGeral === null || p.grupoRisco.startsWith('Sem');
+      return p.grupoRisco.startsWith(g.key);
+    });
+    var avgC = gpros.length ? gpros.filter(function(p){return p.csatGeral!==null;}).reduce(function(s,p){return s+p.csatGeral;},0) / (gpros.filter(function(p){return p.csatGeral!==null;}).length||1) : null;
+    var avgNS = gpros.filter(function(p){return p.noShow30!==null;}).reduce(function(s,p){return s+p.noShow30;},0) / (gpros.filter(function(p){return p.noShow30!==null;}).length||1);
+    var avgF30 = gpros.reduce(function(s,p){return s+p.fD30;},0) / (gpros.length||1);
+    var onclk = 'showPage(&quot;pros-detalhe&quot;,null)';
+    return '<div class="uf-card" onclick="' + onclk + '" data-filter="' + g.filter + '" style="cursor:pointer;border-color:' + g.color + '33">' +
+      '<div class="uf-header"><div class="uf-name">' + g.label + '</div><div class="uf-badge" style="background:' + g.color + '22;color:' + g.color + '">' + g.count + ' PROs · ' + Math.round(g.count/total*100) + '%</div></div>' +
+      '<div class="uf-metrics">' +
+        '<div><div class="uf-m-label">CSAT Medio</div><div class="uf-m-value ' + (avgC!==null?(avgC>=META.csat?'good':'bad'):'') + '">' + (avgC!==null?avgC.toFixed(2):'-') + '</div></div>' +
+        '<div><div class="uf-m-label">NoShow 30 med.</div><div class="uf-m-value ' + (avgNS<=5?'good':avgNS<=10?'warn':'bad') + '">' + avgNS.toFixed(1) + '%</div></div>' +
+        '<div><div class="uf-m-label">Serv D-30 med.</div><div class="uf-m-value">' + Math.round(avgF30) + '</div></div>' +
+      '</div></div>';
+  }).join('');
+  document.getElementById('pros-risco-cards').innerHTML = riscoCards;
+
+  // --- Top UFs por volume ---
+  var ufMap = {};
+  pros.forEach(function(p) {
+    if (!ufMap[p.uf]) ufMap[p.uf] = { total:0, verdes:0, vermelhos:0, fD30:0 };
+    ufMap[p.uf].total++;
+    ufMap[p.uf].fD30 += p.fD30;
+    if (p.grupoRisco.startsWith('Verde')) ufMap[p.uf].verdes++;
+    if (p.grupoRisco.startsWith('Vermelho')) ufMap[p.uf].vermelhos++;
+  });
+  var ufArr = Object.keys(ufMap).map(function(uf) { return Object.assign({uf:uf}, ufMap[uf]); })
+    .sort(function(a,b){ return b.total - a.total; }).slice(0, 8);
+  var ufLabels = ufArr.map(function(u) { return u.uf; });
+  var ufTotals = ufArr.map(function(u) { return u.total; });
+  var ufVerdes = ufArr.map(function(u) { return u.verdes; });
+  var ufVermelhos = ufArr.map(function(u) { return u.vermelhos; });
+  barChart('pros-uf-bar', ufLabels, [
+    { label: 'Verde',    data: ufVerdes,    backgroundColor: 'rgba(0,214,143,.7)', borderRadius: 4 },
+    { label: 'Vermelho', data: ufVermelhos, backgroundColor: 'rgba(255,71,87,.7)',  borderRadius: 4 },
+    { label: 'Outros',   data: ufArr.map(function(u){return u.total-u.verdes-u.vermelhos;}), backgroundColor: 'rgba(90,98,120,.4)', borderRadius: 4 },
+  ], 0, null, null, true);
+
+  // --- Performance WoW ---
   renderPerfGeral();
   renderPerfEstado(ST.perfEstado || 'Geral');
 }
@@ -1810,14 +1933,18 @@ window.switchPerfEstado = function(estado, btn) {
 
 function renderPerfEstado(estado) {
   var viz = ST.data.prosVizMatriz || [];
-  var titleMap = { 'Geral': 'Geral', 'Sao Paulo': 'Sao Paulo', 'Rio de Janeiro': 'Rio de Janeiro' };
-  var section = viz.find(function(s) { return s.title === titleMap[estado] || s.title.includes(estado); });
-  if (!section) return;
+  // Match section by partial title (handles accents)
+  var section = viz.find(function(s) {
+    var t = s.title.toLowerCase();
+    var e = estado.toLowerCase();
+    return t === e || t.includes(e) || e.includes(t);
+  });
+  if (!section) { console.warn('No section for estado:', estado, 'Available:', viz.map(function(s){return s.title;})); return; }
   var labels = section.weeks.map(function(w) { return w.replace('_',' '); });
-  var palette = { 'Alta Performance': C.green, 'Media Performance': C.yellow, 'Baixa Performance': C.red };
+  var palette = { 'Alta Performance': C.green, 'Média Performance': C.yellow, 'Media Performance': C.yellow, 'Baixa Performance': C.red };
   var datasets = section.rows.map(function(row) {
     var col = palette[row.label] || C.blue;
-    return { label: row.label, data: row.values, borderColor: col, backgroundColor: 'transparent', tension: 0.4, pointRadius: 4, borderWidth: 2 };
+    return { label: row.label.replace(' Performance',''), data: row.values, borderColor: col, backgroundColor: 'transparent', tension: 0.4, pointRadius: 4, borderWidth: 2 };
   });
   lineChart('pros-perf-estado', labels, datasets, 0, 100, function(v) { return v + '%'; });
 }
@@ -1975,6 +2102,255 @@ window.setProsFilter = function(filter, btn) {
   btn.classList.add('active');
   ST.prosRiskFilter = filter;
   filterPros();
+};
+
+
+
+// =============================================================
+// PROS ALERTAS
+// =============================================================
+var ST_PROS_ALERTS = [];
+var ST_PROS_ALERT_FILTER = 'all';
+
+var META_CSAT_PRO = 4.7;
+
+function buildProsAlerts() {
+  var pros = ST.data.prosControle || [];
+  if (!pros.length) return;
+
+  // Compute base averages from PROs with data
+  var csatVals = pros.filter(function(p){ return p.csatD30 !== null; }).map(function(p){ return p.csatD30; });
+  var nsVals   = pros.filter(function(p){ return p.noShow30 !== null && p.noShow30 <= 100; }).map(function(p){ return p.noShow30; });
+  var avgCsat  = csatVals.length ? csatVals.reduce(function(s,v){return s+v;},0)/csatVals.length : 4.632;
+  var avgNs    = nsVals.length   ? nsVals.reduce(function(s,v){return s+v;},0)/nsVals.length : 12.45;
+
+  var alerts = [];
+
+  pros.forEach(function(p) {
+    var reasons = [];
+    var score = 0;
+    var ns = p.noShow30 !== null ? Math.min(p.noShow30, 100) : null;
+
+    // Alert 1: CSAT baixo + volume relevante
+    if (p.csatD30 !== null && p.csatD30 < META_CSAT_PRO && p.fD30 >= 5 && p.avalD30 >= 3) {
+      var dev = avgCsat - p.csatD30;
+      var s1  = p.fD30 * dev;
+      score  += s1;
+      reasons.push({ type: 'csat_vol', score: s1,
+        sev: p.csatD30 < 4.3 ? 'critico' : 'atencao',
+        label: 'CSAT ' + p.csatD30.toFixed(2) + ' · ' + p.fD30 + ' serv. D-30' });
+    }
+
+    // Alert 2: No-show acima da média
+    if (ns !== null && ns > avgNs && p.fD30 >= 3) {
+      var devNs = ns - avgNs;
+      var s2    = (devNs / 100) * p.fD30 * 30;
+      score    += s2;
+      reasons.push({ type: 'noshow', score: s2,
+        sev: ns > 25 ? 'critico' : 'atencao',
+        label: 'No-show ' + ns.toFixed(1) + '% (média ' + avgNs.toFixed(1) + '%)' });
+    }
+
+    // Alert 3: Alta confiança estatística (≥10 avaliações D-30 com CSAT < meta)
+    if (p.avalD30 >= 10 && p.csatD30 !== null && p.csatD30 < META_CSAT_PRO) {
+      var s3 = p.avalD30 * (META_CSAT_PRO - p.csatD30) * 3;
+      score += s3;
+      reasons.push({ type: 'alta_conf', score: s3, sev: 'critico',
+        label: p.avalD30 + ' aval. D-30 · CSAT ' + p.csatD30.toFixed(2) });
+    }
+
+    if (reasons.length && score > 0) {
+      alerts.push({
+        cid: p.cid, nome: p.nome, uf: p.uf, cidade: p.cidade,
+        score: score, reasons: reasons,
+        csatD30: p.csatD30, csatGeral: p.csatGeral,
+        ns: ns, fD30: p.fD30, avalD30: p.avalD30,
+        risco: p.grupoRisco, nivel: p.nivel,
+        grupoProd: p.grupoProd,
+        avgCsat: avgCsat, avgNs: avgNs
+      });
+    }
+  });
+
+  alerts.sort(function(a,b){ return b.score - a.score; });
+  ST_PROS_ALERTS = alerts;
+
+  // Badge
+  var badge = document.getElementById('badge-pros-alertas');
+  if (badge) badge.textContent = alerts.length;
+
+  // Build noshow groups for analysis
+  ST.data.prosNsAnalysis = buildNsAnalysis(pros, avgNs);
+}
+
+function buildNsAnalysis(pros, avgNs) {
+  var faixas = [
+    { key: '0-5%',   min: 0,   max: 5,   label: '0–5%',   color: 'rgba(0,214,143,.75)' },
+    { key: '5-10%',  min: 5,   max: 10,  label: '5–10%',  color: 'rgba(255,193,7,.75)' },
+    { key: '10-20%', min: 10,  max: 20,  label: '10–20%', color: 'rgba(255,140,66,.75)' },
+    { key: '>20%',   min: 20,  max: 999, label: '>20%',   color: 'rgba(255,71,87,.8)' },
+  ];
+  faixas.forEach(function(f) {
+    var group = pros.filter(function(p) {
+      return p.noShow30 !== null && p.noShow30 >= f.min && p.noShow30 < f.max;
+    });
+    f.count    = group.length;
+    f.avgCsat  = group.length ? group.filter(function(p){return p.csatD30!==null;}).reduce(function(s,p){return s+p.csatD30;},0) / (group.filter(function(p){return p.csatD30!==null;}).length||1) : null;
+    f.avgFD30  = group.length ? group.reduce(function(s,p){return s+p.fD30;},0) / group.length : 0;
+    f.avgNs    = group.length ? group.reduce(function(s,p){return s+(p.noShow30||0);},0) / group.length : 0;
+    f.pctBase  = pros.length ? (f.count / pros.length * 100) : 0;
+  });
+
+  // Desvio groups: <50% avg / 50-100% avg / 100-200% avg / >200% avg
+  var desvioGroups = [
+    { key: 'muito_baixo', label: 'Muito abaixo da média',  min: 0,    max: 0.5,  color: '#00d68f' },
+    { key: 'abaixo',      label: 'Abaixo da média',        min: 0.5,  max: 1.0,  color: '#4d9fff' },
+    { key: 'acima',       label: 'Acima da média',         min: 1.0,  max: 2.0,  color: '#ffc107' },
+    { key: 'muito_acima', label: 'Muito acima da média',   min: 2.0,  max: 999,  color: '#ff4757' },
+  ];
+  desvioGroups.forEach(function(g) {
+    var group = pros.filter(function(p) {
+      if (p.noShow30 === null) return false;
+      var ratio = avgNs > 0 ? p.noShow30 / avgNs : 0;
+      return ratio >= g.min && ratio < g.max;
+    });
+    g.count   = group.length;
+    g.pctBase = pros.length ? (g.count / pros.length * 100) : 0;
+    g.avgNs   = group.length ? group.reduce(function(s,p){return s+(p.noShow30||0);},0)/group.length : 0;
+  });
+
+  return { faixas: faixas, desvioGroups: desvioGroups, avgNs: avgNs };
+}
+
+function renderProsAlertasPage() {
+  var pros = ST.data.prosControle || [];
+  if (!pros.length) {
+    document.getElementById('pros-alertas-list').innerHTML = '<div class="no-data">Dados não carregados</div>';
+    return;
+  }
+  if (!ST_PROS_ALERTS.length) buildProsAlerts();
+
+  var ns = ST.data.prosNsAnalysis;
+  var filter = ST_PROS_ALERT_FILTER;
+
+  var filtered = filter === 'all' ? ST_PROS_ALERTS : ST_PROS_ALERTS.filter(function(a) {
+    return a.reasons.some(function(r){ return r.type === filter; });
+  });
+
+  // KPIs
+  var totalAlerts  = ST_PROS_ALERTS.length;
+  var criticos     = ST_PROS_ALERTS.filter(function(a){ return a.reasons.some(function(r){return r.sev==='critico';}); }).length;
+  var csatAlerts   = ST_PROS_ALERTS.filter(function(a){ return a.reasons.some(function(r){return r.type==='csat_vol';}); }).length;
+  var noshowAlerts = ST_PROS_ALERTS.filter(function(a){ return a.reasons.some(function(r){return r.type==='noshow';}); }).length;
+
+  document.getElementById('pros-alert-kpis').innerHTML =
+    '<div class="kpi warn"><div class="kpi-label">Total em Alerta</div><div class="kpi-value bad">' + totalAlerts + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(255,71,87,.1);color:var(--red)">' + criticos + ' críticos</span></div></div>' +
+    '<div class="kpi"><div class="kpi-label">Alertas CSAT+Vol</div><div class="kpi-value">' + csatAlerts + '</div><div class="kpi-meta"><span class="kpi-tag">CSAT abaixo da meta</span></div></div>' +
+    '<div class="kpi"><div class="kpi-label">Alertas No-show</div><div class="kpi-value">' + noshowAlerts + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(255,140,66,.1);color:var(--orange)">acima da média</span></div></div>' +
+    '<div class="kpi blue"><div class="kpi-label">Média No-show Base</div><div class="kpi-value">' + (ns ? ns.avgNs.toFixed(1) + '%' : '-') + '</div><div class="kpi-meta"><span class="kpi-tag">benchmark interno</span></div></div>';
+
+  // NoShow faixas chart
+  if (ns) {
+    barChart('pros-ns-faixas',
+      ns.faixas.map(function(f){ return f.label; }),
+      [{ data: ns.faixas.map(function(f){ return f.count; }), borderRadius: 6,
+         backgroundColor: ns.faixas.map(function(f){ return f.color; }) }],
+      0, null);
+
+    // Desvio cards
+    document.getElementById('pros-ns-desvio-wrap').innerHTML =
+      ns.desvioGroups.map(function(g) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;margin-bottom:6px;background:' + g.color + '15;border:1px solid ' + g.color + '30">' +
+          '<div>' +
+            '<div style="font-size:12px;font-weight:700;color:' + g.color + '">' + g.label + '</div>' +
+            '<div style="font-size:10px;color:var(--muted2);margin-top:2px">NS médio: ' + g.avgNs.toFixed(1) + '% · ' + g.pctBase.toFixed(1) + '% da base</div>' +
+          '</div>' +
+          '<div style="font-size:22px;font-weight:800;color:' + g.color + ';font-family:Syne,sans-serif">' + g.count + '</div>' +
+        '</div>';
+      }).join('');
+  }
+
+  // Alert count label
+  document.getElementById('pros-alert-count').textContent = filtered.length + ' profissionais';
+
+  // Alert cards
+  document.getElementById('pros-alertas-list').innerHTML = filtered.slice(0, 100).map(function(a, i) {
+    var rank = i + 1;
+    var sev  = a.reasons.some(function(r){return r.sev==='critico';}) ? 'critico' : 'atencao';
+    var sevColor  = sev === 'critico' ? 'var(--red)' : 'var(--orange)';
+    var sevBg     = sev === 'critico' ? 'rgba(255,71,87,.08)' : 'rgba(255,140,66,.06)';
+    var sevBorder = sev === 'critico' ? 'rgba(255,71,87,.25)' : 'rgba(255,140,66,.2)';
+    var sevLabel  = sev === 'critico' ? 'CRÍTICO' : 'ATENÇÃO';
+
+    var csatHtml = a.csatD30 !== null
+      ? '<span style="font-size:18px;font-weight:800;color:' + (a.csatD30 >= META_CSAT_PRO ? 'var(--green)' : a.csatD30 >= 4.3 ? 'var(--yellow)' : 'var(--red)') + ';font-family:Syne,sans-serif">' + a.csatD30.toFixed(2) + '</span>'
+      : '<span style="font-size:13px;color:var(--muted)">Sem CSAT</span>';
+
+    var nsColor = a.ns === null ? 'var(--muted)' : a.ns > 25 ? 'var(--red)' : a.ns > a.avgNs ? 'var(--orange)' : 'var(--green)';
+    var nsHtml  = a.ns !== null ? '<span style="color:' + nsColor + ';font-weight:700">' + a.ns.toFixed(1) + '%</span>' : '<span style="color:var(--muted)">—</span>';
+
+    // NoShow faixa badge
+    var nsFaixa = a.ns === null ? null : a.ns <= 5 ? {l:'0–5%',c:'var(--green)'} : a.ns <= 10 ? {l:'5–10%',c:'var(--yellow)'} : a.ns <= 20 ? {l:'10–20%',c:'var(--orange)'} : {l:'>20%',c:'var(--red)'};
+    var nsDesvio = a.ns !== null && a.avgNs > 0 ? (a.ns / a.avgNs) : null;
+    var nsDesvioLabel = nsDesvio === null ? '' : nsDesvio < 0.5 ? 'Muito abaixo' : nsDesvio < 1 ? 'Abaixo' : nsDesvio < 2 ? 'Acima' : 'Muito acima';
+    var nsDesvioColor = nsDesvio === null ? '' : nsDesvio < 1 ? 'var(--green)' : nsDesvio < 1.5 ? 'var(--yellow)' : 'var(--red)';
+
+    var reasonChips = a.reasons.map(function(r) {
+      var chipColor = r.type === 'csat_vol' ? 'var(--red)' : r.type === 'noshow' ? 'var(--orange)' : 'var(--purple)';
+      var chipBg    = r.type === 'csat_vol' ? 'rgba(255,71,87,.1)' : r.type === 'noshow' ? 'rgba(255,140,66,.1)' : 'rgba(168,85,247,.1)';
+      var chipLabel = r.type === 'csat_vol' ? 'CSAT+Vol' : r.type === 'noshow' ? 'No-show' : 'Alta Conf.';
+      return '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:' + chipBg + ';color:' + chipColor + ';margin-right:4px;font-family:DM Mono,monospace">' + chipLabel + '</span>';
+    }).join('');
+
+    var riscoColor = a.risco.startsWith('Verde') ? 'var(--green)' : a.risco.startsWith('Amarelo') ? 'var(--yellow)' : a.risco.startsWith('Laranja') ? 'var(--orange)' : a.risco.startsWith('Vermelho') ? 'var(--red)' : 'var(--muted)';
+    var riscoShort = a.risco.startsWith('Verde') ? 'Verde' : a.risco.startsWith('Amarelo') ? 'Amarelo' : a.risco.startsWith('Laranja') ? 'Laranja' : a.risco.startsWith('Vermelho') ? 'Vermelho' : 'Sem CSAT';
+
+    return '<div class="desvio-card" style="background:' + sevBg + ';border-color:' + sevBorder + ';margin-bottom:10px">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">' +
+        '<div style="display:flex;align-items:center;gap:12px;min-width:0">' +
+          '<div class="desvio-rank">' + rank + '</div>' +
+          '<div style="min-width:0">' +
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+              '<span style="font-size:14px;font-weight:700;color:var(--text)">' + a.nome + '</span>' +
+              '<span style="font-size:10px;color:var(--muted2);font-family:DM Mono,monospace">#' + a.cid + '</span>' +
+              '<span style="font-size:10px;padding:1px 7px;border-radius:4px;background:' + riscoColor + '20;color:' + riscoColor + ';font-weight:600">' + riscoShort + '</span>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--muted2);margin-top:3px">' + a.uf + ' · ' + a.cidade + ' · ' + (a.nivel||'-') + ' · ' + a.fD30 + ' serv. D-30</div>' +
+            '<div style="margin-top:6px">' + reasonChips + '</div>' +
+            '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:12px">' +
+              a.reasons.map(function(r){
+                return '<div style="font-size:11px;color:var(--muted2)">↳ ' + r.label + '</div>';
+              }).join('') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:20px;align-items:center;flex-shrink:0">' +
+          '<div style="text-align:center">' +
+            '<div style="font-size:9px;color:var(--muted2);font-family:DM Mono,monospace;margin-bottom:2px">CSAT D-30</div>' +
+            csatHtml +
+          '</div>' +
+          '<div style="text-align:center">' +
+            '<div style="font-size:9px;color:var(--muted2);font-family:DM Mono,monospace;margin-bottom:2px">NO-SHOW</div>' +
+            nsHtml +
+            (nsFaixa ? '<div style="font-size:9px;font-weight:700;color:' + nsFaixa.c + ';margin-top:2px">' + nsFaixa.l + '</div>' : '') +
+            (nsDesvioLabel ? '<div style="font-size:9px;color:' + nsDesvioColor + '">' + nsDesvioLabel + ' da média</div>' : '') +
+          '</div>' +
+          '<div style="text-align:center">' +
+            '<div style="font-size:9px;color:var(--muted2);font-family:DM Mono,monospace;margin-bottom:2px">IMPACTO</div>' +
+            '<span style="font-size:13px;font-weight:700;color:' + sevColor + '">' + Math.round(a.score) + '</span>' +
+            '<div style="font-size:8px;font-weight:800;color:' + sevColor + ';margin-top:2px;letter-spacing:.5px">' + sevLabel + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+window.setProsAlertFilter = function(filter, btn) {
+  document.querySelectorAll('#page-pros-alertas .filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  ST_PROS_ALERT_FILTER = filter;
+  renderProsAlertasPage();
 };
 
 
