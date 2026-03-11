@@ -1668,7 +1668,30 @@ function parseProsControle(rows) {
       isAtivo:   (parseInt(r[8]) || 0) > 0,       // teve servico D-30
       isAnalise: (parseInt(r[11]) || 0) > 0,      // teve servico D-60 (inclui na analise)
     };
+  }).map(function(p) {
+    p.grupoRiscoCalc = calcGrupoRisco(p);
+    return p;
   });
+}
+
+function calcGrupoRisco(p) {
+  // Uses D-60 CSAT and D-60 NoShow
+  var csat  = p.csatD60;
+  var ns    = p.noShow60;
+  var temCsat = csat !== null;
+  var nsBaixo = ns === null || ns <= 5;
+
+  if (!temCsat) {
+    return nsBaixo ? 'Amarelo (Sem CSAT / Baixo No Show)' : 'Vermelho (Sem CSAT / Alto No Show)';
+  }
+  if (csat >= 4.7) {
+    return nsBaixo ? 'Verde (Alto CSAT / Baixo No Show)' : 'Amarelo (Alto CSAT / Alto No Show)';
+  }
+  if (csat >= 4.3) {
+    return nsBaixo ? 'Amarelo (Médio CSAT / Baixo No Show)' : 'Vermelho (Médio CSAT / Alto No Show)';
+  }
+  // csat < 4.3
+  return nsBaixo ? 'Laranja (Baixo CSAT / Baixo No Show)' : 'Vermelho (Baixo CSAT / Alto No Show)';
 }
 
 function parseProdPros(rows) {
@@ -1818,11 +1841,11 @@ function renderProsOverview() {
   var ativosD30 = pros.filter(function(p){ return p.isAtivo; }).length; // ativos D-30
   var comCsat = pros.filter(function(p) { return p.csatGeral !== null; });
   var avgCsat = comCsat.length ? comCsat.reduce(function(s,p) { return s + p.csatGeral; }, 0) / comCsat.length : null;
-  var verdes    = pros.filter(function(p) { return p.grupoRisco.startsWith('Verde'); }).length;
-  var vermelhos = pros.filter(function(p) { return p.grupoRisco.startsWith('Vermelho'); }).length;
-  var amarelos  = pros.filter(function(p) { return p.grupoRisco.startsWith('Amarelo'); }).length;
-  var laranjas  = pros.filter(function(p) { return p.grupoRisco.startsWith('Laranja'); }).length;
-  var semCsat   = pros.filter(function(p) { return p.csatGeral === null || p.grupoRisco.startsWith('Sem'); }).length;
+  var verdes    = pros.filter(function(p) { return (p.grupoRiscoCalc||p.grupoRisco).startsWith('Verde'); }).length;
+  var vermelhos = pros.filter(function(p) { return (p.grupoRiscoCalc||p.grupoRisco).startsWith('Vermelho'); }).length;
+  var amarelos  = pros.filter(function(p) { return (p.grupoRiscoCalc||p.grupoRisco).startsWith('Amarelo'); }).length;
+  var laranjas  = pros.filter(function(p) { return (p.grupoRiscoCalc||p.grupoRisco).startsWith('Laranja'); }).length;
+  var semCsat   = pros.filter(function(p) { return p.csatD60 === null; }).length;
 
   // Ativos do Matriz (ultima semana)
   var mAtivos = 0, mCadastrados = 0;
@@ -1842,9 +1865,9 @@ function renderProsOverview() {
   var riscoLabels = ['Verde','Amarelo','Laranja','Vermelho B/A','Vermelho M/A','Vermelho A/A','Sem CSAT'];
   var riscoMap = { 'Verde': verdes, 'Amarelo': amarelos, 'Laranja': laranjas, 'Sem CSAT': semCsat };
   pros.forEach(function(p) {
-    var g = p.grupoRisco;
+    var g = p.grupoRiscoCalc || p.grupoRisco;
     if (g.startsWith('Vermelho (Baixo'))  riscoMap['Vermelho B/A'] = (riscoMap['Vermelho B/A']||0)+1;
-    else if (g.startsWith('Vermelho (Médio') || g.startsWith('Vermelho (Medio')) riscoMap['Vermelho M/A'] = (riscoMap['Vermelho M/A']||0)+1;
+    else if (g.startsWith('Vermelho (Médio') || g.startsWith('Vermelho (Medio') || g.startsWith('Vermelho (Sem')) riscoMap['Vermelho M/A'] = (riscoMap['Vermelho M/A']||0)+1;
     else if (g.startsWith('Vermelho (Alto'))  riscoMap['Vermelho A/A'] = (riscoMap['Vermelho A/A']||0)+1;
   });
   var riscoVals   = riscoLabels.map(function(k) { return riscoMap[k] || 0; });
@@ -1874,8 +1897,9 @@ function renderProsOverview() {
   ];
   var riscoCards = riscoSummary.map(function(g) {
     var gpros = pros.filter(function(p) {
-      if (g.key === 'Sem') return p.csatGeral === null || p.grupoRisco.startsWith('Sem');
-      return p.grupoRisco.startsWith(g.key);
+      var gr = p.grupoRiscoCalc || p.grupoRisco;
+      if (g.key === 'Sem') return p.csatD60 === null;
+      return gr.startsWith(g.key);
     });
     var avgC = gpros.length ? gpros.filter(function(p){return p.csatGeral!==null;}).reduce(function(s,p){return s+p.csatGeral;},0) / (gpros.filter(function(p){return p.csatGeral!==null;}).length||1) : null;
     var avgNS = gpros.filter(function(p){return p.noShow30!==null;}).reduce(function(s,p){return s+p.noShow30;},0) / (gpros.filter(function(p){return p.noShow30!==null;}).length||1);
@@ -1897,8 +1921,9 @@ function renderProsOverview() {
     if (!ufMap[p.uf]) ufMap[p.uf] = { total:0, verdes:0, vermelhos:0, fD30:0 };
     ufMap[p.uf].total++;
     ufMap[p.uf].fD30 += p.fD30;
-    if (p.grupoRisco.startsWith('Verde')) ufMap[p.uf].verdes++;
-    if (p.grupoRisco.startsWith('Vermelho')) ufMap[p.uf].vermelhos++;
+    var gr = p.grupoRiscoCalc || p.grupoRisco;
+    if (gr.startsWith('Verde'))    ufMap[p.uf].verdes++;
+    if (gr.startsWith('Vermelho')) ufMap[p.uf].vermelhos++;
   });
   var ufArr = Object.keys(ufMap).map(function(uf) { return Object.assign({uf:uf}, ufMap[uf]); })
     .sort(function(a,b){ return b.total - a.total; }).slice(0, 8);
@@ -2064,14 +2089,18 @@ window.filterPros = function() {
   var search = (document.getElementById('pros-search').value || '').toLowerCase();
   ST.prosSearchTerm = search;
   var rf = ST.prosRiskFilter;
+  // Se busca é só dígitos, trata como busca por CID — ignora filtro de risco
+  var isCidSearch = search && /^\d+$/.test(search);
   var pros = ST.prosData.filter(function(p) {
+    var matchCid = p.cid.toString().includes(search);
+    if (isCidSearch && matchCid) return true; // CID match ignora filtro de risco
     var matchSearch = !search ||
       p.nome.toLowerCase().includes(search) ||
       p.cidade.toLowerCase().includes(search) ||
       p.uf.toLowerCase().includes(search) ||
-      p.cid.toString().toLowerCase().includes(search) ||
+      matchCid ||
       p.categoria.toLowerCase().includes(search);
-    var rg = p.grupoRisco.toLowerCase();
+    var rg = (p.grupoRiscoCalc || p.grupoRisco).toLowerCase();
     var matchRisk = rf === 'all'     ? true :
       rf === 'analise' ? p.isAnalise :
       rf === 'ativo'   ? p.isAtivo :
@@ -2084,7 +2113,7 @@ window.filterPros = function() {
   });
 
   document.getElementById('pros-tbody').innerHTML = pros.slice(0, 500).map(function(p) {
-    var rc = riscoClass(p.grupoRisco);
+    var rc = riscoClass(p.grupoRiscoCalc || p.grupoRisco);
     var noshow = p.noShow30 !== null ? p.noShow30.toFixed(1) + '%' : '-';
     var noshow60 = p.noShow60 !== null ? p.noShow60.toFixed(1) + '%' : '-';
     var csat = p.csatGeral !== null ? p.csatGeral.toFixed(2) : '-';
@@ -2106,7 +2135,7 @@ window.filterPros = function() {
       '<td class="' + csatCls + '" style="text-align:right;font-weight:600">' + csat + '</td>' +
       '<td class="' + csatCls + '" style="text-align:right">' + csatD30 + '</td>' +
       '<td style="text-align:right;color:var(--muted2)">' + p.avalD30 + '</td>' +
-      '<td><span class="pros-risco-badge ' + rc + '">' + riscoLabel(p.grupoRisco) + '</span></td>' +
+      '<td><span class="pros-risco-badge ' + rc + '">' + riscoLabel(p.grupoRiscoCalc || p.grupoRisco) + '</span></td>' +
       '<td style="font-size:10px;color:var(--muted2)">' + p.grupoProd + '</td>' +
     '</tr>';
   }).join('');
@@ -2181,7 +2210,7 @@ function buildProsAlerts() {
         score: score, reasons: reasons,
         csatD30: p.csatD30, csatGeral: p.csatGeral,
         ns: ns, fD30: p.fD30, avalD30: p.avalD30,
-        risco: p.grupoRisco, nivel: p.nivel,
+        risco: p.grupoRiscoCalc || p.grupoRisco, nivel: p.nivel,
         grupoProd: p.grupoProd,
         avgCsat: avgCsat, avgNs: avgNs
       });
