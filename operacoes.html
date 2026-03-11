@@ -545,7 +545,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
       <div class="search-bar">
         <input type="text" class="search-input" id="pros-search" placeholder="Buscar por nome, cidade ou UF..." oninput="filterPros()">
-        <button class="filter-btn active" onclick="setProsFilter('all',this)">Todos</button>
+        <button class="filter-btn active" onclick="setProsFilter('analise',this)">Ativos D-60</button>
+        <button class="filter-btn" onclick="setProsFilter('ativo',this)" style="color:var(--blue)">Ativos D-30</button>
+        <button class="filter-btn" onclick="setProsFilter('all',this)">Todos</button>
         <button class="filter-btn" onclick="setProsFilter('verde',this)" style="color:var(--green)">Verde</button>
         <button class="filter-btn" onclick="setProsFilter('amarelo',this)" style="color:var(--yellow)">Amarelo</button>
         <button class="filter-btn" onclick="setProsFilter('laranja',this)" style="color:var(--orange)">Laranja</button>
@@ -1663,6 +1665,8 @@ function parseProsControle(rows) {
       grupoRisco: r[32] || '-',
       reciclagens: parseInt(r[33]) || 0,
       nivel:     r[36] || '-',
+      isAtivo:   (parseInt(r[8]) || 0) > 0,       // teve servico D-30
+      isAnalise: (parseInt(r[11]) || 0) > 0,      // teve servico D-60 (inclui na analise)
     };
   });
 }
@@ -1800,16 +1804,18 @@ function parseProsWow(rows) {
 // RENDER PROS OVERVIEW
 // =============================================================
 function renderProsOverview() {
-  var pros = ST.data.prosControle || [];
+  var prosAll  = ST.data.prosControle || [];
+  var pros     = prosAll.filter(function(p){ return p.isAnalise; }); // apenas D-60 ativos
   var prod = ST.data.prosProd || [];
   var mData = ST.data.prosMatriz;
-  if (!pros.length) {
+  if (!prosAll.length) {
     document.getElementById('pros-kpis').innerHTML = '<div class="no-data" style="grid-column:1/-1">Dados de PROs nao carregados</div>';
     return;
   }
 
   // --- KPIs principais ---
-  var total = pros.length;
+  var total = pros.length; // base analisada (D-60)
+  var ativosD30 = pros.filter(function(p){ return p.isAtivo; }).length; // ativos D-30
   var comCsat = pros.filter(function(p) { return p.csatGeral !== null; });
   var avgCsat = comCsat.length ? comCsat.reduce(function(s,p) { return s + p.csatGeral; }, 0) / comCsat.length : null;
   var verdes    = pros.filter(function(p) { return p.grupoRisco.startsWith('Verde'); }).length;
@@ -1827,7 +1833,7 @@ function renderProsOverview() {
   }
 
   document.getElementById('pros-kpis').innerHTML =
-    '<div class="kpi blue"><div class="kpi-label">Cadastrados</div><div class="kpi-value">' + (mCadastrados||total) + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">' + mAtivos + ' ativos (' + (mCadastrados ? Math.round(mAtivos/mCadastrados*100) : 0) + '%)</span></div></div>' +
+    '<div class="kpi blue"><div class="kpi-label">Ativos D-30</div><div class="kpi-value">' + ativosD30 + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(77,159,255,.1);color:var(--blue)">' + total + ' na análise D-60</span></div></div>' +
     kpiCard('CSAT Medio Base', avgCsat, null, META.csat) +
     '<div class="kpi good"><div class="kpi-label">Verdes</div><div class="kpi-value good">' + verdes + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(0,214,143,.1);color:var(--green)">' + Math.round(verdes/total*100) + '% da base</span></div></div>' +
     '<div class="kpi warn"><div class="kpi-label">Criticos (Vermelho)</div><div class="kpi-value bad">' + vermelhos + '</div><div class="kpi-meta"><span class="kpi-tag" style="background:rgba(255,71,87,.1);color:var(--red)">' + Math.round(vermelhos/total*100) + '% da base</span></div></div>';
@@ -2027,6 +2033,12 @@ function renderProsDetalhe() {
     document.getElementById('pros-tbody').innerHTML = '<tr><td colspan="16" style="text-align:center;color:var(--muted);padding:24px">Dados nao carregados</td></tr>';
     return;
   }
+  // Default to D-60 active on first load
+  if (!ST.prosRiskFilter || ST.prosRiskFilter === 'all') {
+    ST.prosRiskFilter = 'analise';
+    var btn = document.querySelector('#page-pros-detalhe .filter-btn');
+    if (btn) { document.querySelectorAll('#page-pros-detalhe .filter-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); }
+  }
   filterPros();
 }
 
@@ -2057,14 +2069,17 @@ window.filterPros = function() {
       p.nome.toLowerCase().includes(search) ||
       p.cidade.toLowerCase().includes(search) ||
       p.uf.toLowerCase().includes(search) ||
-      p.cid.toString().includes(search);
+      p.cid.toString().toLowerCase().includes(search) ||
+      p.categoria.toLowerCase().includes(search);
     var rg = p.grupoRisco.toLowerCase();
-    var matchRisk = rf === 'all' ? true :
-      rf === 'verde'   ? rg.startsWith('verde') :
-      rf === 'amarelo' ? rg.startsWith('amarelo') :
-      rf === 'laranja' ? rg.startsWith('laranja') :
-      rf === 'vermelho'? rg.startsWith('vermelho') :
-      rf === 'sem-csat'? (rg.startsWith('sem') || rg === '-') : true;
+    var matchRisk = rf === 'all'     ? true :
+      rf === 'analise' ? p.isAnalise :
+      rf === 'ativo'   ? p.isAtivo :
+      rf === 'verde'   ? (p.isAnalise && rg.startsWith('verde')) :
+      rf === 'amarelo' ? (p.isAnalise && rg.startsWith('amarelo')) :
+      rf === 'laranja' ? (p.isAnalise && rg.startsWith('laranja')) :
+      rf === 'vermelho'? (p.isAnalise && rg.startsWith('vermelho')) :
+      rf === 'sem-csat'? (p.isAnalise && (rg.startsWith('sem') || rg === '-')) : true;
     return matchSearch && matchRisk;
   });
 
@@ -2115,7 +2130,8 @@ var ST_PROS_ALERT_FILTER = 'all';
 var META_CSAT_PRO = 4.7;
 
 function buildProsAlerts() {
-  var pros = ST.data.prosControle || [];
+  var prosAll = ST.data.prosControle || [];
+  var pros = prosAll.filter(function(p){ return p.isAnalise; }); // D-60 apenas
   if (!pros.length) return;
 
   // Compute base averages from PROs with data
