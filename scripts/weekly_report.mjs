@@ -20,7 +20,7 @@ async function fetchSheet(){
   const token=await auth.getAccessToken();
   const range=encodeURIComponent(SHEET_NAME+"!A1:DZ300");
   const data=await new Promise((res,rej)=>{
-    https.get(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueRenderOption=UNFORMATTED_VALUE`,{headers:{Authorization:`Bearer ${token}`}},(r)=>{
+    https.get(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}`,{headers:{Authorization:`Bearer ${token}`}},(r)=>{
       let raw="";r.on("data",c=>raw+=c);r.on("end",()=>{try{res(JSON.parse(raw))}catch(e){rej(e)}});
     }).on("error",rej);
   });
