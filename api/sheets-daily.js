@@ -87,24 +87,29 @@ export default async function handler(req, res) {
       if (/^\d{1,2}\/\d{2}$/.test(h)) dateCols.push({ col: i, date: h });
     });
 
-    // Keep only columns with actual data, then take last 30
-    const withData = dateCols.filter(({ col }) =>
-      rows.slice(headerIdx + 1).some((r) => r[col] && r[col] !== "0" && r[col] !== "")
-    );
-    const last30 = withData.slice(-30);
-
-    // Extract metric rows
-    const metrics = {};
+    // Find metric rows first
+    const metricRows = {};
     for (const row of rows) {
       const name = row[0]?.trim();
       if (!name) continue;
       const key = METRIC_KEYS.find((m) => name === m);
-      if (key && !metrics[key]) {
-        metrics[key] = last30.map(({ col, date }) => ({
-          date,
-          value: parseNum(row[col]),
-        }));
-      }
+      if (key && !metricRows[key]) metricRows[key] = row;
+    }
+
+    // Filter date columns where GMV TOTAL has actual data (not 0/empty)
+    const gmvRow = metricRows["GMV TOTAL"];
+    const withData = gmvRow
+      ? dateCols.filter(({ col }) => { const v = gmvRow[col]; return v && v !== "0" && v !== ""; })
+      : dateCols.filter(({ col }) => rows.slice(headerIdx + 1).some((r) => r[col] && r[col] !== "0" && r[col] !== ""));
+    const last30 = withData.slice(-30);
+
+    // Build metrics from the found rows
+    const metrics = {};
+    for (const [key, row] of Object.entries(metricRows)) {
+      metrics[key] = last30.map(({ col, date }) => ({
+        date,
+        value: parseNum(row[col]),
+      }));
     }
 
     return res.status(200).json({
