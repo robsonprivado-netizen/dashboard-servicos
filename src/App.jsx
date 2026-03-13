@@ -57,10 +57,17 @@ export default function App() {
   const dlast = dailyChartData[dailyChartData.length - 1] || {};
   const dprev = dailyChartData[dailyChartData.length - 2] || {};
 
-  // Para AOV: usa o último dia com valor real (pode não ter dado recente)
+  // Para AOV: usa o último dia com valor real
   const lastAovDay = [...dailyChartData].reverse().find(d => d["AOV"] > 0) || {};
   const aovValue = lastAovDay["AOV"] ?? 0;
   const aovDate = lastAovDay["date"] ?? null;
+
+  // Filtra outliers do gráfico AOV: exclui valores > 2x o percentil 80
+  // (dias com volume mínimo geram AOV absurdo no sheet, ex: 3310 em dias com 1-2 pedidos)
+  const aovNonZero = dailyChartData.filter(d => d["AOV"] > 0);
+  const aovSorted = aovNonZero.map(d => d["AOV"]).sort((a, b) => a - b);
+  const aovP80 = aovSorted[Math.floor(aovSorted.length * 0.8)] || 500;
+  const aovChartData = aovNonZero.filter(d => d["AOV"] <= aovP80 * 2);
   const dod = (k) => dprev[k] ? (((dlast[k] - dprev[k]) / dprev[k]) * 100).toFixed(1) : null;
   const dodPill = (k) => { const v = dod(k); return v ? `${parseFloat(v) >= 0 ? "▲" : "▼"} ${Math.abs(parseFloat(v))}% DoD` : "—"; };
   const dodUp = (k) => { const v = dod(k); return v ? parseFloat(v) >= 0 : true; };
@@ -406,7 +413,7 @@ export default function App() {
                 </Card>
                 <Card title="AOV Diário" subtitle="R$ ticket médio">
                   <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={dailyChartData.filter(d => d["AOV"] > 0)}>
+                    <LineChart data={aovChartData}>
                       <XAxis dataKey="date" tick={{ fill:"#6b7280", fontSize:10 }} axisLine={false} tickLine={false} interval={4} />
                       <YAxis domain={["auto","auto"]} tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
                       <Tooltip {...tt} />
