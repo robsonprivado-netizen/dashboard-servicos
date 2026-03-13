@@ -59,6 +59,23 @@ export default function App() {
   const dodPill = (k) => { const v = dod(k); return v ? `${parseFloat(v) >= 0 ? "▲" : "▼"} ${Math.abs(parseFloat(v))}% DoD` : "—"; };
   const dodUp = (k) => { const v = dod(k); return v ? parseFloat(v) >= 0 : true; };
 
+  // WoW: últimos 7 dias vs 7 dias anteriores
+  const last7 = dailyChartData.slice(-7);
+  const prev7 = dailyChartData.slice(-14, -7);
+  const wsum = (arr, k) => arr.reduce((s, d) => s + (d[k] || 0), 0);
+  const wowPct = (k) => { const c = wsum(last7, k), p = wsum(prev7, k); return p > 0 ? (c - p) / p * 100 : null; };
+  const wowStr = (k) => { const v = wowPct(k); return v != null ? `${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(1)}% WoW` : "—"; };
+  const wowUp = (k) => { const v = wowPct(k); return v != null ? v >= 0 : true; };
+
+  // Vs Meta — mapeamento de chart key → API key
+  const VM_MAP = {
+    "GMV Total": "GMV TOTAL", "Automático": "GMV Automático", "App": "GMV App",
+    "Site": "GMV Site", "GuideShops": "GMV GuideShops", "TDV": "GMV TDV",
+    "Avulso": "GMV AVULSO TOTAL", "Conversão %": "CONVERSÃO GERAL (BUNDLE)", "AOV": "AOV TOTAL",
+  };
+  const vmStr = (k) => { const v = dailyData?.vsMeta?.[VM_MAP[k]]; return v ? `Meta ${v}` : null; };
+  const subStr = (k) => [dodPill(k), vmStr(k)].filter(Boolean).join(" · ");
+
   return (
     <div style={{ background:"#0a0c10", color:"#e8eaf0", minHeight:"100vh" }}>
       <div style={{ maxWidth:1300, margin:"0 auto", padding:"32px 20px" }}>
@@ -294,16 +311,25 @@ export default function App() {
           )}
           {dailyData && dailyChartData.length > 0 && (
             <>
+              {/* KPIs principais */}
               <SectionLabel>KPIs do Dia — {dailyData.dates[dailyData.dates.length - 1]}/2026</SectionLabel>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-                <KpiCard label="GMV Total" value={`R$${dlast["GMV Total"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("GMV Total")} pillUp={dodUp("GMV Total")} color="green" />
-                <KpiCard label="GMV Automático" value={`R$${dlast["Automático"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("Automático")} pillUp={dodUp("Automático")} color="blue" />
-                <KpiCard label="GMV GuideShops" value={`R$${dlast["GuideShops"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("GuideShops")} pillUp={dodUp("GuideShops")} color="yellow" />
-                <KpiCard label="GMV TDV" value={`R$${dlast["TDV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("TDV")} pillUp={dodUp("TDV")} color="orange" />
-                <KpiCard label="Conversão" value={`${dlast["Conversão %"]?.toFixed(1) ?? "—"}%`} pill={dodPill("Conversão %")} pillUp={dodUp("Conversão %")} color="green" />
-                <KpiCard label="AOV" value={`R$${dlast["AOV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("AOV")} pillUp={dodUp("AOV")} color="blue" />
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))", gap:14, marginBottom:28 }}>
+                <KpiCard label="GMV Total" value={`R$${dlast["GMV Total"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("GMV Total")} pillUp={wowUp("GMV Total")} color="green" sub={subStr("GMV Total")} />
+                <KpiCard label="Conversão Geral" value={`${dlast["Conversão %"]?.toFixed(1) ?? "—"}%`} pill={wowStr("Conversão %")} pillUp={wowUp("Conversão %")} color="blue" sub={subStr("Conversão %")} />
+                <KpiCard label="AOV Total" value={`R$${dlast["AOV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("AOV")} pillUp={wowUp("AOV")} color="yellow" sub={subStr("AOV")} />
               </div>
 
+              {/* KPIs por canal */}
+              <SectionLabel>GMV por Canal — Último Dia</SectionLabel>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))", gap:14, marginBottom:28 }}>
+                <KpiCard label="App" value={`R$${dlast["App"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("App")} pillUp={wowUp("App")} color="green" sub={subStr("App")} />
+                <KpiCard label="Site" value={`R$${dlast["Site"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("Site")} pillUp={wowUp("Site")} color="blue" sub={subStr("Site")} />
+                <KpiCard label="GuideShops" value={`R$${dlast["GuideShops"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("GuideShops")} pillUp={wowUp("GuideShops")} color="yellow" sub={subStr("GuideShops")} />
+                <KpiCard label="TDV" value={`R$${dlast["TDV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("TDV")} pillUp={wowUp("TDV")} color="orange" sub={subStr("TDV")} />
+                <KpiCard label="Avulso" value={`R$${dlast["Avulso"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("Avulso")} pillUp={wowUp("Avulso")} color="green" sub={subStr("Avulso")} />
+              </div>
+
+              {/* GMV Total + Conversão */}
               <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:16, marginBottom:16 }}>
                 <Card title="GMV Total — Evolução Diária" subtitle={`Últimos ${dailyChartData.length} dias`}>
                   <ResponsiveContainer width="100%" height={230}>
@@ -329,7 +355,8 @@ export default function App() {
                 </Card>
               </div>
 
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+              {/* Canais empilhado + App vs Site */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
                 <Card title="GMV por Canal — Diário" subtitle="Empilhado">
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={dailyChartData}>
@@ -337,11 +364,38 @@ export default function App() {
                       <YAxis tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
                       <Tooltip {...tt} />
                       <Legend wrapperStyle={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#9ca3af" }} />
-                      <Bar dataKey="Automático" stackId="a" fill={C.green+"bb"} />
+                      <Bar dataKey="App" stackId="a" fill={C.green+"bb"} />
+                      <Bar dataKey="Site" stackId="a" fill={C.blue+"bb"} />
                       <Bar dataKey="GuideShops" stackId="a" fill={C.yellow+"bb"} />
                       <Bar dataKey="TDV" stackId="a" fill={C.orange+"bb"} />
                       <Bar dataKey="Avulso" stackId="a" fill={C.purple+"bb"} radius={[3,3,0,0]} />
                     </BarChart>
+                  </ResponsiveContainer>
+                </Card>
+                <Card title="App vs Site" subtitle="R$k diário">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={dailyChartData}>
+                      <XAxis dataKey="date" tick={{ fill:"#6b7280", fontSize:10 }} axisLine={false} tickLine={false} interval={4} />
+                      <YAxis tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
+                      <Tooltip {...tt} /><Legend wrapperStyle={{ fontSize:11 }} />
+                      <Line type="monotone" dataKey="App" stroke={C.green} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="Site" stroke={C.blue} strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Card>
+              </div>
+
+              {/* GuideShops vs TDV + AOV */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+                <Card title="GuideShops vs TDV" subtitle="R$k diário">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={dailyChartData}>
+                      <XAxis dataKey="date" tick={{ fill:"#6b7280", fontSize:10 }} axisLine={false} tickLine={false} interval={4} />
+                      <YAxis tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
+                      <Tooltip {...tt} /><Legend wrapperStyle={{ fontSize:11 }} />
+                      <Line type="monotone" dataKey="GuideShops" stroke={C.yellow} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="TDV" stroke={C.orange} strokeWidth={2} dot={false} />
+                    </LineChart>
                   </ResponsiveContainer>
                 </Card>
                 <Card title="AOV Diário" subtitle="R$ ticket médio">
@@ -355,6 +409,49 @@ export default function App() {
                   </ResponsiveContainer>
                 </Card>
               </div>
+
+              {/* Tabela últimos 7 dias */}
+              <Card title="Últimos 7 Dias por Canal" subtitle="com WoW">
+                <div style={{ overflowX:"auto" }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12, fontFamily:"'DM Mono',monospace" }}>
+                    <thead>
+                      <tr>
+                        {["Canal", ...dailyChartData.slice(-7).map(d => d.date), "WoW"].map(h => (
+                          <th key={h} style={{ padding:"8px 10px", borderBottom:"1px solid #22283a", color:"#6b7280", textAlign:h==="Canal"?"left":"right", fontSize:11 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { name:"GMV Total", key:"GMV Total", bold:true },
+                        { name:"App",        key:"App" },
+                        { name:"Site",       key:"Site" },
+                        { name:"GuideShops", key:"GuideShops" },
+                        { name:"TDV",        key:"TDV" },
+                        { name:"Avulso",     key:"Avulso" },
+                        { name:"Conversão %",key:"Conversão %" },
+                        { name:"AOV",        key:"AOV" },
+                      ].map((row, i) => {
+                        const days7 = dailyChartData.slice(-7);
+                        const w = wowPct(row.key);
+                        return (
+                          <tr key={i}>
+                            <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", fontWeight:row.bold?700:400 }}>{row.name}</td>
+                            {days7.map((d, j) => (
+                              <td key={j} style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right", color:"#9ca3af" }}>
+                                {row.key === "Conversão %" ? `${d[row.key]?.toFixed(1)}%` : d[row.key]?.toLocaleString("pt-BR")}
+                              </td>
+                            ))}
+                            <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right" }}>
+                              {w != null ? <span style={{ background:w>=0?"rgba(0,229,160,0.12)":"rgba(255,107,74,0.12)", color:w>=0?C.green:C.orange, padding:"2px 7px", borderRadius:100, fontSize:11 }}>{w>=0?"▲":"▼"} {Math.abs(w).toFixed(1)}%</span> : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
             </>
           )}
           {dailyData && dailyChartData.length === 0 && !dailyLoading && (

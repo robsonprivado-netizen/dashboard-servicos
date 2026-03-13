@@ -3,6 +3,7 @@ import https from "https";
 
 const SHEET_ID = "1-iFLORoVt9ocMaGa5tLLD7NgoU_3d3TV7KOlNUoRUuw";
 const SHEET_NAME = "Diário";
+const VS_META_COL = 735; // coluna ABH (0-indexed)
 
 const METRIC_KEYS = [
   "GMV TOTAL",
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
       scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
     const token = await auth.getAccessToken();
-    const range = encodeURIComponent(`${SHEET_NAME}!A1:ZZ1000`);
+    const range = encodeURIComponent(`${SHEET_NAME}!A1:ABI1000`); // ABI cobre até ABH (col 736)
 
     const data = await new Promise((resolve, reject) => {
       https.get(
@@ -103,18 +104,22 @@ export default async function handler(req, res) {
       : dateCols.filter(({ col }) => rows.slice(headerIdx + 1).some((r) => r[col] && r[col] !== "0" && r[col] !== ""));
     const last30 = withData.slice(-30);
 
-    // Build metrics from the found rows
+    // Build metrics and vsMeta from the found rows
     const metrics = {};
+    const vsMeta = {};
     for (const [key, row] of Object.entries(metricRows)) {
       metrics[key] = last30.map(({ col, date }) => ({
         date,
         value: parseNum(row[col]),
       }));
+      const vm = row[VS_META_COL];
+      if (vm && vm !== "" && vm !== "0") vsMeta[key] = vm;
     }
 
     return res.status(200).json({
       dates: last30.map((d) => d.date),
       metrics,
+      vsMeta,
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });
