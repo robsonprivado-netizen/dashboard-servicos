@@ -5,6 +5,7 @@ import KpiCard from "./components/KpiCard.jsx";
 import Card from "./components/Card.jsx";
 import SectionLabel from "./components/SectionLabel.jsx";
 import AnalysisFooter from "./components/AnalysisFooter.jsx";
+import DailyAnalysisFooter from "./components/DailyAnalysisFooter.jsx";
 
 const tt = {
   contentStyle:{ background:"#181c24", border:"1px solid #22283a", borderRadius:8, fontFamily:"'DM Mono',monospace", fontSize:12 },
@@ -400,9 +401,9 @@ export default function App() {
                 </Card>
                 <Card title="AOV Diário" subtitle="R$ ticket médio">
                   <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={dailyChartData}>
+                    <LineChart data={dailyChartData.filter(d => d["AOV"] > 0)}>
                       <XAxis dataKey="date" tick={{ fill:"#6b7280", fontSize:10 }} axisLine={false} tickLine={false} interval={4} />
-                      <YAxis tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
+                      <YAxis domain={["auto","auto"]} tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
                       <Tooltip {...tt} />
                       <Line type="monotone" dataKey="AOV" stroke={C.blue} strokeWidth={2} dot={false} />
                     </LineChart>
@@ -411,7 +412,7 @@ export default function App() {
               </div>
 
               {/* Tabela últimos 7 dias */}
-              <Card title="Últimos 7 Dias por Canal" subtitle="com WoW">
+              <Card title="Últimos 7 Dias por Canal" subtitle="WoW">
                 <div style={{ overflowX:"auto" }}>
                   <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12, fontFamily:"'DM Mono',monospace" }}>
                     <thead>
@@ -452,6 +453,8 @@ export default function App() {
                   </table>
                 </div>
               </Card>
+
+              <DailyAnalysisFooter dailyData={dailyData} dailyChartData={dailyChartData} />
             </>
           )}
           {dailyData && dailyChartData.length === 0 && !dailyLoading && (
