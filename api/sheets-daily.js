@@ -116,10 +116,27 @@ export default async function handler(req, res) {
       if (vm && vm !== "" && vm !== "0") vsMeta[key] = vm;
     }
 
+    // Debug mode: returns raw AOV row values to diagnose zero issue
+    const debugObj = {};
+    if (req.query?.debug === "1") {
+      const aovRow = metricRows["AOV TOTAL"];
+      debugObj._debug = {
+        aovRowFound: !!aovRow,
+        aovRowLabel: aovRow?.[0] ?? null,
+        aovLast10Raw: aovRow
+          ? last30.slice(-10).map(({ col, date }) => ({ date, raw: aovRow[col] ?? "(undefined)", parsed: parseNum(aovRow[col]) }))
+          : [],
+        metricRowsFound: Object.keys(metricRows),
+        totalDateCols: dateCols.length,
+        last30Dates: last30.map((d) => d.date),
+      };
+    }
+
     return res.status(200).json({
       dates: last30.map((d) => d.date),
       metrics,
       vsMeta,
+      ...debugObj,
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });

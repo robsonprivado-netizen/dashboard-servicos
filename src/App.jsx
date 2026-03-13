@@ -56,6 +56,11 @@ export default function App() {
 
   const dlast = dailyChartData[dailyChartData.length - 1] || {};
   const dprev = dailyChartData[dailyChartData.length - 2] || {};
+
+  // Para AOV: usa o último dia com valor real (pode não ter dado recente)
+  const lastAovDay = [...dailyChartData].reverse().find(d => d["AOV"] > 0) || {};
+  const aovValue = lastAovDay["AOV"] ?? 0;
+  const aovDate = lastAovDay["date"] ?? null;
   const dod = (k) => dprev[k] ? (((dlast[k] - dprev[k]) / dprev[k]) * 100).toFixed(1) : null;
   const dodPill = (k) => { const v = dod(k); return v ? `${parseFloat(v) >= 0 ? "▲" : "▼"} ${Math.abs(parseFloat(v))}% DoD` : "—"; };
   const dodUp = (k) => { const v = dod(k); return v ? parseFloat(v) >= 0 : true; };
@@ -317,7 +322,7 @@ export default function App() {
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))", gap:14, marginBottom:28 }}>
                 <KpiCard label="GMV Total" value={`R$${dlast["GMV Total"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("GMV Total")} pillUp={wowUp("GMV Total")} color="green" sub={subStr("GMV Total")} />
                 <KpiCard label="Conversão Geral" value={`${dlast["Conversão %"]?.toFixed(1) ?? "—"}%`} pill={wowStr("Conversão %")} pillUp={wowUp("Conversão %")} color="blue" sub={subStr("Conversão %")} />
-                <KpiCard label="AOV Total" value={`R$${dlast["AOV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("AOV")} pillUp={wowUp("AOV")} color="yellow" sub={subStr("AOV")} />
+                <KpiCard label="AOV Total" value={aovValue ? `R$${aovValue.toLocaleString("pt-BR")}` : "—"} pill={wowStr("AOV")} pillUp={wowUp("AOV")} color="yellow" sub={[aovDate && aovDate !== dlast["date"] ? `último dado: ${aovDate}` : null, dodPill("AOV") !== "—" ? dodPill("AOV") : null, vmStr("AOV")].filter(Boolean).join(" · ") || subStr("AOV")} />
               </div>
 
               {/* KPIs por canal */}
@@ -440,7 +445,7 @@ export default function App() {
                             <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", fontWeight:row.bold?700:400 }}>{row.name}</td>
                             {days7.map((d, j) => (
                               <td key={j} style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right", color:"#9ca3af" }}>
-                                {row.key === "Conversão %" ? `${d[row.key]?.toFixed(1)}%` : d[row.key]?.toLocaleString("pt-BR")}
+                                {row.key === "Conversão %" ? `${d[row.key]?.toFixed(1)}%` : row.key === "AOV" ? (d[row.key] > 0 ? d[row.key].toLocaleString("pt-BR") : "—") : d[row.key]?.toLocaleString("pt-BR")}
                               </td>
                             ))}
                             <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right" }}>
