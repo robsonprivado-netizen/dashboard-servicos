@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
 import { WEEKLY, PIE_DATA, COLORS, C, RAW } from "./data.js";
 import KpiCard from "./components/KpiCard.jsx";
@@ -17,11 +17,47 @@ const TABS = [
   { id:"canais", label:"Canais" },
   { id:"conversao", label:"Conversão & AOV" },
   { id:"sessoes", label:"Sessões" },
+  { id:"diario", label:"Diário" },
 ];
 
 export default function App() {
   const [tab, setTab] = useState("overview");
   const s = (id) => ({ display: tab === id ? "block" : "none" });
+
+  const [dailyData, setDailyData] = useState(null);
+  const [dailyLoading, setDailyLoading] = useState(false);
+  const [dailyError, setDailyError] = useState(null);
+
+  useEffect(() => {
+    if (tab !== "diario" || dailyData) return;
+    setDailyLoading(true);
+    fetch("/api/sheets-daily")
+      .then(r => r.json())
+      .then(d => { setDailyData(d); setDailyLoading(false); })
+      .catch(e => { setDailyError(e.message); setDailyLoading(false); });
+  }, [tab]);
+
+  const dailyChartData = dailyData ? dailyData.dates.map((date, i) => {
+    const m = dailyData.metrics;
+    return {
+      date,
+      "GMV Total": m["GMV TOTAL"]?.[i]?.value ?? 0,
+      "Automático": m["GMV Automático"]?.[i]?.value ?? 0,
+      "App": m["GMV App"]?.[i]?.value ?? 0,
+      "Site": m["GMV Site"]?.[i]?.value ?? 0,
+      "GuideShops": m["GMV GuideShops"]?.[i]?.value ?? 0,
+      "TDV": m["GMV TDV"]?.[i]?.value ?? 0,
+      "Avulso": m["GMV AVULSO TOTAL"]?.[i]?.value ?? 0,
+      "Conversão %": m["CONVERSÃO GERAL (BUNDLE)"]?.[i]?.value ?? 0,
+      "AOV": m["AOV TOTAL"]?.[i]?.value ?? 0,
+    };
+  }) : [];
+
+  const dlast = dailyChartData[dailyChartData.length - 1] || {};
+  const dprev = dailyChartData[dailyChartData.length - 2] || {};
+  const dod = (k) => dprev[k] ? (((dlast[k] - dprev[k]) / dprev[k]) * 100).toFixed(1) : null;
+  const dodPill = (k) => { const v = dod(k); return v ? `${parseFloat(v) >= 0 ? "▲" : "▼"} ${Math.abs(parseFloat(v))}% DoD` : "—"; };
+  const dodUp = (k) => { const v = dod(k); return v ? parseFloat(v) >= 0 : true; };
 
   return (
     <div style={{ background:"#0a0c10", color:"#e8eaf0", minHeight:"100vh" }}>
@@ -242,6 +278,90 @@ export default function App() {
               </BarChart>
             </ResponsiveContainer>
           </Card>
+        </div>
+
+        {/* DIÁRIO */}
+        <div style={s("diario")}>
+          {dailyLoading && (
+            <div style={{ textAlign:"center", padding:80, color:"#6b7280", fontFamily:"'DM Mono',monospace", fontSize:13 }}>
+              Carregando dados diários...
+            </div>
+          )}
+          {dailyError && (
+            <div style={{ textAlign:"center", padding:80, color:"#ff6b4a", fontFamily:"'DM Mono',monospace" }}>
+              Erro: {dailyError}
+            </div>
+          )}
+          {dailyData && dailyChartData.length > 0 && (
+            <>
+              <SectionLabel>KPIs do Dia — {dailyData.dates[dailyData.dates.length - 1]}/2026</SectionLabel>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
+                <KpiCard label="GMV Total" value={`R$${dlast["GMV Total"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("GMV Total")} pillUp={dodUp("GMV Total")} color="green" />
+                <KpiCard label="GMV Automático" value={`R$${dlast["Automático"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("Automático")} pillUp={dodUp("Automático")} color="blue" />
+                <KpiCard label="GMV GuideShops" value={`R$${dlast["GuideShops"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("GuideShops")} pillUp={dodUp("GuideShops")} color="yellow" />
+                <KpiCard label="GMV TDV" value={`R$${dlast["TDV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("TDV")} pillUp={dodUp("TDV")} color="orange" />
+                <KpiCard label="Conversão" value={`${dlast["Conversão %"]?.toFixed(1) ?? "—"}%`} pill={dodPill("Conversão %")} pillUp={dodUp("Conversão %")} color="green" />
+                <KpiCard label="AOV" value={`R$${dlast["AOV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={dodPill("AOV")} pillUp={dodUp("AOV")} color="blue" />
+              </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:16, marginBottom:16 }}>
+                <Card title="GMV Total — Evolução Diária" subtitle={`Últimos ${dailyChartData.length} dias`}>
+                  <ResponsiveContainer width="100%" height={230}>
+                    <AreaChart data={dailyChartData}>
+                      <defs><linearGradient id="gGreenD" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.green} stopOpacity={0.25}/><stop offset="95%" stopColor={C.green} stopOpacity={0}/></linearGradient></defs>
+                      <XAxis dataKey="date" tick={{ fill:"#6b7280", fontSize:10 }} axisLine={false} tickLine={false} interval={4} />
+                      <YAxis tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
+                      <Tooltip {...tt} />
+                      <Area type="monotone" dataKey="GMV Total" stroke={C.green} fill="url(#gGreenD)" strokeWidth={2} dot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Card>
+                <Card title="Conversão Diária" subtitle="%">
+                  <ResponsiveContainer width="100%" height={230}>
+                    <AreaChart data={dailyChartData}>
+                      <defs><linearGradient id="gConvD" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.blue} stopOpacity={0.2}/><stop offset="95%" stopColor={C.blue} stopOpacity={0}/></linearGradient></defs>
+                      <XAxis dataKey="date" tick={{ fill:"#6b7280", fontSize:10 }} axisLine={false} tickLine={false} interval={4} />
+                      <YAxis tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
+                      <Tooltip {...tt} />
+                      <Area type="monotone" dataKey="Conversão %" stroke={C.blue} fill="url(#gConvD)" strokeWidth={2} dot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Card>
+              </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                <Card title="GMV por Canal — Diário" subtitle="Empilhado">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={dailyChartData}>
+                      <XAxis dataKey="date" tick={{ fill:"#6b7280", fontSize:10 }} axisLine={false} tickLine={false} interval={4} />
+                      <YAxis tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
+                      <Tooltip {...tt} />
+                      <Legend wrapperStyle={{ fontSize:11, fontFamily:"'DM Mono',monospace", color:"#9ca3af" }} />
+                      <Bar dataKey="Automático" stackId="a" fill={C.green+"bb"} />
+                      <Bar dataKey="GuideShops" stackId="a" fill={C.yellow+"bb"} />
+                      <Bar dataKey="TDV" stackId="a" fill={C.orange+"bb"} />
+                      <Bar dataKey="Avulso" stackId="a" fill={C.purple+"bb"} radius={[3,3,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Card>
+                <Card title="AOV Diário" subtitle="R$ ticket médio">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={dailyChartData}>
+                      <XAxis dataKey="date" tick={{ fill:"#6b7280", fontSize:10 }} axisLine={false} tickLine={false} interval={4} />
+                      <YAxis tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
+                      <Tooltip {...tt} />
+                      <Line type="monotone" dataKey="AOV" stroke={C.blue} strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Card>
+              </div>
+            </>
+          )}
+          {dailyData && dailyChartData.length === 0 && !dailyLoading && (
+            <div style={{ textAlign:"center", padding:80, color:"#6b7280", fontFamily:"'DM Mono',monospace" }}>
+              Nenhum dado encontrado na aba "Diário"
+            </div>
+          )}
         </div>
 
         {/* AI FOOTER */}
