@@ -28,13 +28,18 @@ export default function App() {
   const [dailyData, setDailyData] = useState(null);
   const [dailyLoading, setDailyLoading] = useState(false);
   const [dailyError, setDailyError] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   useEffect(() => {
     if (tab !== "diario" || dailyData) return;
     setDailyLoading(true);
     fetch("/api/sheets-daily")
       .then(r => r.json())
-      .then(d => { setDailyData(d); setDailyLoading(false); })
+      .then(d => {
+        setDailyData(d);
+        setDailyLoading(false);
+        if (d.dates?.length) setSelectedDate(d.dates[d.dates.length - 1]);
+      })
       .catch(e => { setDailyError(e.message); setDailyLoading(false); });
   }, [tab]);
 
@@ -55,28 +60,36 @@ export default function App() {
   }) : [];
 
   const dlast = dailyChartData[dailyChartData.length - 1] || {};
-  const dprev = dailyChartData[dailyChartData.length - 2] || {};
 
-  // Para AOV: usa o último dia com valor real
-  const lastAovDay = [...dailyChartData].reverse().find(d => d["AOV"] > 0) || {};
-  const aovValue = lastAovDay["AOV"] ?? 0;
-  const aovDate = lastAovDay["date"] ?? null;
+  // Índice do dia selecionado (padrão: último dia)
+  const selIdx = (selectedDate && dailyChartData.length > 0)
+    ? Math.max(0, dailyChartData.findIndex(d => d.date === selectedDate))
+    : dailyChartData.length - 1;
+  const dsel = dailyChartData[selIdx] || {};
+  const dselPrev = dailyChartData[selIdx - 1] || {};
 
-  // Filtra outliers do gráfico AOV: exclui valores > 2x o percentil 80
-  // (dias com volume mínimo geram AOV absurdo no sheet, ex: 3310 em dias com 1-2 pedidos)
+  // AOV outlier filter (global para o gráfico)
   const aovNonZero = dailyChartData.filter(d => d["AOV"] > 0);
   const aovSorted = aovNonZero.map(d => d["AOV"]).sort((a, b) => a - b);
   const aovP80 = aovSorted[Math.floor(aovSorted.length * 0.8)] || 500;
   const aovChartData = aovNonZero.filter(d => d["AOV"] <= aovP80 * 2);
-  const dod = (k) => dprev[k] ? (((dlast[k] - dprev[k]) / dprev[k]) * 100).toFixed(1) : null;
+
+  // AOV: último valor válido até o dia selecionado
+  const lastAovDay = dailyChartData.slice(0, selIdx + 1)
+    .filter(d => d["AOV"] > 0 && d["AOV"] <= aovP80 * 2).reverse()[0] || {};
+  const aovValue = lastAovDay["AOV"] ?? 0;
+  const aovDate = lastAovDay["date"] ?? null;
+
+  // DoD: dia selecionado vs dia anterior
+  const dod = (k) => dselPrev[k] ? (((dsel[k] - dselPrev[k]) / dselPrev[k]) * 100).toFixed(1) : null;
   const dodPill = (k) => { const v = dod(k); return v ? `${parseFloat(v) >= 0 ? "▲" : "▼"} ${Math.abs(parseFloat(v))}% DoD` : "—"; };
   const dodUp = (k) => { const v = dod(k); return v ? parseFloat(v) >= 0 : true; };
 
-  // WoW: últimos 7 dias vs 7 dias anteriores
-  const last7 = dailyChartData.slice(-7);
-  const prev7 = dailyChartData.slice(-14, -7);
+  // WoW: 7 dias terminando no dia selecionado vs 7 anteriores
+  const sel7 = dailyChartData.slice(Math.max(0, selIdx - 6), selIdx + 1);
+  const selPrev7 = dailyChartData.slice(Math.max(0, selIdx - 13), Math.max(0, selIdx - 6));
   const wsum = (arr, k) => arr.reduce((s, d) => s + (d[k] || 0), 0);
-  const wowPct = (k) => { const c = wsum(last7, k), p = wsum(prev7, k); return p > 0 ? (c - p) / p * 100 : null; };
+  const wowPct = (k) => { const c = wsum(sel7, k), p = wsum(selPrev7, k); return p > 0 ? (c - p) / p * 100 : null; };
   const wowStr = (k) => { const v = wowPct(k); return v != null ? `${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(1)}% WoW` : "—"; };
   const wowUp = (k) => { const v = wowPct(k); return v != null ? v >= 0 : true; };
 
@@ -324,22 +337,44 @@ export default function App() {
           )}
           {dailyData && dailyChartData.length > 0 && (
             <>
+              {/* Filtro de data */}
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24, flexWrap:"wrap" }}>
+                <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"#6b7280", letterSpacing:"0.08em", textTransform:"uppercase" }}>Dia</span>
+                <select
+                  value={selectedDate || ""}
+                  onChange={e => setSelectedDate(e.target.value)}
+                  style={{ background:"#111318", border:"1px solid #22283a", color:"#e8eaf0", borderRadius:6, padding:"7px 12px", fontSize:12, fontFamily:"'DM Mono',monospace", cursor:"pointer", outline:"none" }}
+                >
+                  {dailyData.dates.map(d => (
+                    <option key={d} value={d}>{d}/2026</option>
+                  ))}
+                </select>
+                {selectedDate && selectedDate !== dailyData.dates[dailyData.dates.length - 1] && (
+                  <button
+                    onClick={() => setSelectedDate(dailyData.dates[dailyData.dates.length - 1])}
+                    style={{ background:"transparent", border:"1px solid #22283a", color:"#6b7280", borderRadius:6, padding:"7px 12px", fontSize:11, fontFamily:"'DM Mono',monospace", cursor:"pointer" }}
+                  >
+                    ← Último dia
+                  </button>
+                )}
+              </div>
+
               {/* KPIs principais */}
-              <SectionLabel>KPIs do Dia — {dailyData.dates[dailyData.dates.length - 1]}/2026</SectionLabel>
+              <SectionLabel>KPIs do Dia — {selectedDate || dlast["date"]}/2026</SectionLabel>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))", gap:14, marginBottom:28 }}>
-                <KpiCard label="GMV Total" value={`R$${dlast["GMV Total"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("GMV Total")} pillUp={wowUp("GMV Total")} color="green" sub={subStr("GMV Total")} />
-                <KpiCard label="Conversão Geral" value={`${dlast["Conversão %"]?.toFixed(1) ?? "—"}%`} pill={wowStr("Conversão %")} pillUp={wowUp("Conversão %")} color="blue" sub={subStr("Conversão %")} />
-                <KpiCard label="AOV Total" value={aovValue ? `R$${aovValue.toLocaleString("pt-BR")}` : "—"} pill={wowStr("AOV")} pillUp={wowUp("AOV")} color="yellow" sub={[aovDate && aovDate !== dlast["date"] ? `último dado: ${aovDate}` : null, dodPill("AOV") !== "—" ? dodPill("AOV") : null, vmStr("AOV")].filter(Boolean).join(" · ") || subStr("AOV")} />
+                <KpiCard label="GMV Total" value={`R$${dsel["GMV Total"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("GMV Total")} pillUp={wowUp("GMV Total")} color="green" sub={subStr("GMV Total")} />
+                <KpiCard label="Conversão Geral" value={`${dsel["Conversão %"]?.toFixed(1) ?? "—"}%`} pill={wowStr("Conversão %")} pillUp={wowUp("Conversão %")} color="blue" sub={subStr("Conversão %")} />
+                <KpiCard label="AOV Total" value={aovValue ? `R$${aovValue.toLocaleString("pt-BR")}` : "—"} pill={wowStr("AOV")} pillUp={wowUp("AOV")} color="yellow" sub={[aovDate && aovDate !== dsel["date"] ? `último dado: ${aovDate}` : null, dodPill("AOV") !== "—" ? dodPill("AOV") : null, vmStr("AOV")].filter(Boolean).join(" · ") || subStr("AOV")} />
               </div>
 
               {/* KPIs por canal */}
-              <SectionLabel>GMV por Canal — Último Dia</SectionLabel>
+              <SectionLabel>GMV por Canal — {selectedDate || dlast["date"]}/2026</SectionLabel>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))", gap:14, marginBottom:28 }}>
-                <KpiCard label="App" value={`R$${dlast["App"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("App")} pillUp={wowUp("App")} color="green" sub={subStr("App")} />
-                <KpiCard label="Site" value={`R$${dlast["Site"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("Site")} pillUp={wowUp("Site")} color="blue" sub={subStr("Site")} />
-                <KpiCard label="GuideShops" value={`R$${dlast["GuideShops"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("GuideShops")} pillUp={wowUp("GuideShops")} color="yellow" sub={subStr("GuideShops")} />
-                <KpiCard label="TDV" value={`R$${dlast["TDV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("TDV")} pillUp={wowUp("TDV")} color="orange" sub={subStr("TDV")} />
-                <KpiCard label="Avulso" value={`R$${dlast["Avulso"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("Avulso")} pillUp={wowUp("Avulso")} color="green" sub={subStr("Avulso")} />
+                <KpiCard label="App" value={`R$${dsel["App"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("App")} pillUp={wowUp("App")} color="green" sub={subStr("App")} />
+                <KpiCard label="Site" value={`R$${dsel["Site"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("Site")} pillUp={wowUp("Site")} color="blue" sub={subStr("Site")} />
+                <KpiCard label="GuideShops" value={`R$${dsel["GuideShops"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("GuideShops")} pillUp={wowUp("GuideShops")} color="yellow" sub={subStr("GuideShops")} />
+                <KpiCard label="TDV" value={`R$${dsel["TDV"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("TDV")} pillUp={wowUp("TDV")} color="orange" sub={subStr("TDV")} />
+                <KpiCard label="Avulso" value={`R$${dsel["Avulso"]?.toLocaleString("pt-BR") ?? "—"}`} pill={wowStr("Avulso")} pillUp={wowUp("Avulso")} color="green" sub={subStr("Avulso")} />
               </div>
 
               {/* GMV Total + Conversão */}
@@ -423,14 +458,14 @@ export default function App() {
                 </Card>
               </div>
 
-              {/* Tabela últimos 7 dias */}
-              <Card title="Últimos 7 Dias por Canal" subtitle="WoW">
+              {/* Tabela 7 dias terminando no dia selecionado */}
+              <Card title={`7 Dias até ${selectedDate || dlast["date"]}`} subtitle="com WoW">
                 <div style={{ overflowX:"auto" }}>
                   <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12, fontFamily:"'DM Mono',monospace" }}>
                     <thead>
                       <tr>
-                        {["Canal", ...dailyChartData.slice(-7).map(d => d.date), "WoW"].map(h => (
-                          <th key={h} style={{ padding:"8px 10px", borderBottom:"1px solid #22283a", color:"#6b7280", textAlign:h==="Canal"?"left":"right", fontSize:11 }}>{h}</th>
+                        {["Canal", ...sel7.map(d => d.date), "WoW"].map(h => (
+                          <th key={h} style={{ padding:"8px 10px", borderBottom:"1px solid #22283a", color:"#6b7280", textAlign:h==="Canal"?"left":"right", fontSize:11, fontWeight: h === selectedDate ? 800 : 400 }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -445,7 +480,7 @@ export default function App() {
                         { name:"Conversão %",key:"Conversão %" },
                         { name:"AOV",        key:"AOV" },
                       ].map((row, i) => {
-                        const days7 = dailyChartData.slice(-7);
+                        const days7 = sel7;
                         const w = wowPct(row.key);
                         return (
                           <tr key={i}>
