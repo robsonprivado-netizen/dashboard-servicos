@@ -1,5 +1,6 @@
 import { GoogleAuth } from "google-auth-library";
 import https from "https";
+import { getSessionEmail } from "./_auth.js";
 
 const SHEET_ID = "1-iFLORoVt9ocMaGa5tLLD7NgoU_3d3TV7KOlNUoRUuw";
 const SHEET_NAME = "Diário";
@@ -28,8 +29,10 @@ function parseNum(v) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=300");
+  res.setHeader("Cache-Control", "s-maxage=300, private");
+
+  const email = getSessionEmail(req);
+  if (!email) return res.status(401).json({ error: "Não autenticado" });
 
   if (!process.env.GOOGLE_SERVICE_ACCOUNT) {
     return res.status(500).json({ error: "GOOGLE_SERVICE_ACCOUNT not configured" });
