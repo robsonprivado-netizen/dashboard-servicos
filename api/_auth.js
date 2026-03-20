@@ -3,6 +3,7 @@ import crypto from "crypto";
 const SECRET = process.env.SESSION_SECRET || "dev-secret-change-in-production";
 const COOKIE_NAME = "ds_session";
 const ALLOWED_DOMAIN = "madeiramadeira.com.br";
+const ALLOWED_EMAILS = ["alexandre.pereira@iguanafix.com.br"];
 const MAX_AGE = 7 * 24 * 60 * 60; // 7 dias em segundos
 
 export function makeSessionToken(email) {
@@ -59,4 +60,4 @@ export function clearSessionCookie(res) {
   );
 }
 
-export { ALLOWED_DOMAIN };
+export { ALLOWED_DOMAIN, ALLOWED_EMAILS };

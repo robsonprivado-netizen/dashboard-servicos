@@ -33,7 +33,6 @@ export default function LoginGate({ children }) {
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
         callback: handleCredential,
-        hosted_domain: "madeiramadeira.com.br",
       });
       if (btnRef.current) {
         window.google.accounts.id.renderButton(btnRef.current, {

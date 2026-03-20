@@ -1,5 +1,5 @@
 import https from "https";
-import { setSessionCookie, ALLOWED_DOMAIN } from "../_auth.js";
+import { setSessionCookie, ALLOWED_DOMAIN, ALLOWED_EMAILS } from "../_auth.js";
 
 // Verifica o ID token do Google e cria sessão se o domínio for @madeiramadeira.com.br
 export default async function handler(req, res) {
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "E-mail não verificado" });
     }
 
-    if (!tokenInfo.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+    if (!tokenInfo.email.endsWith(`@${ALLOWED_DOMAIN}`) && !ALLOWED_EMAILS.includes(tokenInfo.email)) {
       return res.status(403).json({
         error: `Acesso restrito a contas @${ALLOWED_DOMAIN}`
       });
