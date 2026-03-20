@@ -82,10 +82,15 @@ export default async function handler(req, res) {
 
     const headers = rows[headerIdx];
 
-    // Coleta colunas de semanas
+    // Coleta colunas de semanas e ordena cronologicamente
     const weekCols = [];
     headers.forEach((h, i) => {
       if (/^\d{1,2}\/\d{4}$/.test(h)) weekCols.push({ col: i, week: h });
+    });
+    weekCols.sort((a, b) => {
+      const [wa, ya] = a.week.split("/").map(Number);
+      const [wb, yb] = b.week.split("/").map(Number);
+      return ya !== yb ? ya - yb : wa - wb;
     });
 
     // Constrói métricas a partir das linhas de dados

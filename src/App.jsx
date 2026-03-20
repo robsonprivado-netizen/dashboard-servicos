@@ -34,11 +34,13 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  // Constrói WEEKLY a partir da API ou usa fallback estático durante carregamento
+  // Constrói WEEKLY a partir da API (semanas reais do ano: S6, S7, ..., S12)
+  // ou usa fallback estático durante carregamento
   const WEEKLY = (weeklyData?.weeks?.length) ? weeklyData.weeks.map((wk, i) => {
     const m = weeklyData.metrics;
+    const weekNum = parseInt(wk.split("/")[0], 10); // número real da semana no ano
     return {
-      week: `S${parseInt(wk.split("/")[0], 10)}`,
+      week: `S${weekNum}`,
       "GMV Total":   m["GMV TOTAL"]?.[i]?.value ?? 0,
       "Automático":  m["GMV Automático"]?.[i]?.value ?? 0,
       "App":         m["GMV App"]?.[i]?.value ?? 0,
