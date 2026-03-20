@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
-import { WEEKLY, PIE_DATA, COLORS, C, RAW } from "./data.js";
+import { WEEKLY as WEEKLY_STATIC, PIE_DATA as PIE_DATA_STATIC, COLORS, C, RAW } from "./data.js";
 import KpiCard from "./components/KpiCard.jsx";
 import Card from "./components/Card.jsx";
 import SectionLabel from "./components/SectionLabel.jsx";
@@ -24,6 +24,70 @@ const TABS = [
 export default function App() {
   const [tab, setTab] = useState("overview");
   const s = (id) => ({ display: tab === id ? "block" : "none" });
+
+  // Dados semanais dinâmicos
+  const [weeklyData, setWeeklyData] = useState(null);
+  useEffect(() => {
+    fetch("/api/sheets-weekly", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => setWeeklyData(d))
+      .catch(() => {});
+  }, []);
+
+  // Constrói WEEKLY a partir da API ou usa fallback estático durante carregamento
+  const WEEKLY = (weeklyData?.weeks?.length) ? weeklyData.weeks.map((wk, i) => {
+    const m = weeklyData.metrics;
+    return {
+      week: `S${parseInt(wk.split("/")[0], 10)}`,
+      "GMV Total":   m["GMV TOTAL"]?.[i]?.value ?? 0,
+      "Automático":  m["GMV Automático"]?.[i]?.value ?? 0,
+      "App":         m["GMV App"]?.[i]?.value ?? 0,
+      "Site":        m["GMV Site"]?.[i]?.value ?? 0,
+      "GuideShops":  m["GMV GuideShops"]?.[i]?.value ?? 0,
+      "TDV":         m["GMV TDV"]?.[i]?.value ?? 0,
+      "Avulso":      m["GMV AVULSO TOTAL"]?.[i]?.value ?? 0,
+      "Conversão %": m["CONVERSÃO GERAL (BUNDLE)"]?.[i]?.value ?? 0,
+      "AOV":         m["AOV TOTAL"]?.[i]?.value ?? 0,
+      "AOV TDV":     m["AOV TDV"]?.[i]?.value ?? 0,
+      "AOV GS":      m["AOV GuideShops"]?.[i]?.value ?? 0,
+      "App Sess":    m["Sessões App"]?.[i]?.value ?? 0,
+      "Site Sess":   m["Sessões Site"]?.[i]?.value ?? 0,
+    };
+  }) : WEEKLY_STATIC;
+
+  const PIE_DATA = (() => {
+    const last = WEEKLY[WEEKLY.length - 1] || {};
+    return [
+      { name: "App",        value: last["App"]        || 0 },
+      { name: "Site",       value: last["Site"]        || 0 },
+      { name: "GuideShops", value: last["GuideShops"]  || 0 },
+      { name: "TDV",        value: last["TDV"]         || 0 },
+      { name: "Avulso",     value: last["Avulso"]      || 0 },
+    ];
+  })();
+
+  // Helpers para KPIs da última semana
+  const lastW = WEEKLY[WEEKLY.length - 1] || {};
+  const prevW = WEEKLY[WEEKLY.length - 2] || {};
+  const wowPctW = (k) => prevW[k] ? ((lastW[k] - prevW[k]) / prevW[k] * 100) : null;
+  const wowStrW = (k) => { const v = wowPctW(k); return v != null ? `${v >= 0 ? "▲" : "▼"} ${Math.abs(v).toFixed(1)}% WoW` : "—"; };
+  const wowUpW  = (k) => { const v = wowPctW(k); return v != null ? v >= 0 : true; };
+  const fmtK    = (v) => v ? `R$${Math.round(v).toLocaleString("pt-BR")}k` : "—";
+  const fmtPct  = (v) => v ? `${v.toFixed(1)}%` : "—";
+  const fmtR    = (v) => v ? `R$${Math.round(v).toLocaleString("pt-BR")}` : "—";
+  const lastWeekLabel = lastW.week || "S?";
+  const firstWeekLabel = WEEKLY[0]?.week || "S1";
+
+  // RAW dinâmico para tabela de canais
+  const RAW_W = {
+    gmvTotal:  WEEKLY.map(w => w["GMV Total"]),
+    gmvAuto:   WEEKLY.map(w => w["Automático"]),
+    gmvApp:    WEEKLY.map(w => w["App"]),
+    gmvSite:   WEEKLY.map(w => w["Site"]),
+    gmvGS:     WEEKLY.map(w => w["GuideShops"]),
+    gmvTDV:    WEEKLY.map(w => w["TDV"]),
+    gmvAvulso: WEEKLY.map(w => w["Avulso"]),
+  };
 
   const [dailyData, setDailyData] = useState(null);
   const [dailyLoading, setDailyLoading] = useState(false);
@@ -112,9 +176,9 @@ export default function App() {
             <h1 style={{ fontSize:26, fontWeight:800, letterSpacing:"-0.5px" }}>
               Report Comercial <span style={{ color:C.green }}>Serviços</span> 2026
             </h1>
-            <p style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"#6b7280", marginTop:6, letterSpacing:"0.05em" }}>SEMANAL · SEMANAS 1–9 · DADOS EM R$k</p>
+            <p style={{ fontFamily:"'DM Mono',monospace", fontSize:11, color:"#6b7280", marginTop:6, letterSpacing:"0.05em" }}>SEMANAL · {firstWeekLabel}–{lastWeekLabel} · DADOS EM R$k</p>
           </div>
-          <span style={{ background:"rgba(0,229,160,0.1)", border:"1px solid rgba(0,229,160,0.3)", color:C.green, fontFamily:"'DM Mono',monospace", fontSize:11, padding:"6px 12px", borderRadius:4 }}>▲ WoW +17,6% · S10 Recorde</span>
+          <span style={{ background:"rgba(0,229,160,0.1)", border:"1px solid rgba(0,229,160,0.3)", color:C.green, fontFamily:"'DM Mono',monospace", fontSize:11, padding:"6px 12px", borderRadius:4 }}>{wowStrW("GMV Total")} · {lastWeekLabel}</span>
         </div>
 
         {/* Tabs */}
@@ -128,18 +192,18 @@ export default function App() {
 
         {/* OVERVIEW */}
         <div style={s("overview")}>
-          <SectionLabel>KPIs Principais — Semana 10/2026</SectionLabel>
+          <SectionLabel>KPIs Principais — {lastWeekLabel}/2026</SectionLabel>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-            <KpiCard label="GMV Total" value="R$1.098k" pill="▲ 17,6% WoW" pillUp color="green" sub="vs Meta +116%" />
-            <KpiCard label="GMV Automático" value="R$598k" pill="▲ 13,9% WoW" pillUp color="blue" sub="vs Meta +145%" />
-            <KpiCard label="GMV GuideShops" value="R$306k" pill="▲ 23,6% WoW" pillUp color="yellow" sub="vs Meta +103%" />
-            <KpiCard label="GMV TDV" value="R$161k" pill="▲ 25,8% WoW" pillUp color="orange" sub="vs Meta +108%" />
-            <KpiCard label="GMV Avulso" value="R$60k" pill="▼ 18,0% WoW" pillUp={false} color="green" sub="vs Meta +90%" />
-            <KpiCard label="Conversão Geral" value="23,6%" pill="▲ recorde do período" pillUp color="blue" />
+            <KpiCard label="GMV Total"      value={fmtK(lastW["GMV Total"])}   pill={wowStrW("GMV Total")}   pillUp={wowUpW("GMV Total")}   color="green" />
+            <KpiCard label="GMV Automático" value={fmtK(lastW["Automático"])}  pill={wowStrW("Automático")}  pillUp={wowUpW("Automático")}  color="blue" />
+            <KpiCard label="GMV GuideShops" value={fmtK(lastW["GuideShops"])}  pill={wowStrW("GuideShops")}  pillUp={wowUpW("GuideShops")}  color="yellow" />
+            <KpiCard label="GMV TDV"        value={fmtK(lastW["TDV"])}         pill={wowStrW("TDV")}         pillUp={wowUpW("TDV")}         color="orange" />
+            <KpiCard label="GMV Avulso"     value={fmtK(lastW["Avulso"])}      pill={wowStrW("Avulso")}      pillUp={wowUpW("Avulso")}      color="green" />
+            <KpiCard label="Conversão Geral" value={fmtPct(lastW["Conversão %"])} pill={wowStrW("Conversão %")} pillUp={wowUpW("Conversão %")} color="blue" />
           </div>
 
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:16, marginBottom:16 }}>
-            <Card title="GMV Total — Evolução Semanal" subtitle="R$k · Semanas 1–9/2026">
+            <Card title="GMV Total — Evolução Semanal" subtitle={`R$k · ${firstWeekLabel}–${lastWeekLabel}/2026`}>
               <ResponsiveContainer width="100%" height={230}>
                 <AreaChart data={WEEKLY}>
                   <defs><linearGradient id="gGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.green} stopOpacity={0.25}/><stop offset="95%" stopColor={C.green} stopOpacity={0}/></linearGradient></defs>
@@ -150,7 +214,7 @@ export default function App() {
                 </AreaChart>
               </ResponsiveContainer>
             </Card>
-            <Card title="Mix de Canais" subtitle="Share GMV — Semana 9">
+            <Card title="Mix de Canais" subtitle={`Share GMV — ${lastWeekLabel}`}>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={PIE_DATA} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
@@ -199,10 +263,10 @@ export default function App() {
         {/* CANAIS */}
         <div style={s("canais")}>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-            <KpiCard label="App (S10)" value="R$306k" pill="▲ 19,5% WoW" pillUp pillUp={false} color="green" />
-            <KpiCard label="Site (S10)" value="R$277k" pill="▲ 6,2% WoW" pillUp color="blue" />
-            <KpiCard label="GuideShops (S9)" value="R$306k" pill="▲ 23,6% WoW" pillUp color="yellow" />
-            <KpiCard label="TDV (S9)" value="R$161k" pill="▲ 25,8% WoW" pillUp color="orange" />
+            <KpiCard label={`App (${lastWeekLabel})`}        value={fmtK(lastW["App"])}        pill={wowStrW("App")}        pillUp={wowUpW("App")}        color="green" />
+            <KpiCard label={`Site (${lastWeekLabel})`}       value={fmtK(lastW["Site"])}       pill={wowStrW("Site")}       pillUp={wowUpW("Site")}       color="blue" />
+            <KpiCard label={`GuideShops (${lastWeekLabel})`} value={fmtK(lastW["GuideShops"])} pill={wowStrW("GuideShops")} pillUp={wowUpW("GuideShops")} color="yellow" />
+            <KpiCard label={`TDV (${lastWeekLabel})`}        value={fmtK(lastW["TDV"])}        pill={wowStrW("TDV")}        pillUp={wowUpW("TDV")}        color="orange" />
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
             <Card title="App vs Site" subtitle="R$k">
@@ -228,29 +292,34 @@ export default function App() {
               </ResponsiveContainer>
             </Card>
           </div>
-          <Card title="Tabela GMV por Canal" subtitle="R$k · Semanas 1–9/2026">
+          <Card title="Tabela GMV por Canal" subtitle={`R$k · ${firstWeekLabel}–${lastWeekLabel}/2026`}>
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12, fontFamily:"'DM Mono',monospace" }}>
                 <thead>
-                  <tr>{["Canal","S1","S2","S3","S4","S5","S6","S7","S8","S9","Total","WoW"].map(h => <th key={h} style={{ padding:"8px 10px", borderBottom:"1px solid #22283a", color:"#6b7280", textAlign:h==="Canal"?"left":"right", fontSize:11 }}>{h}</th>)}</tr>
+                  <tr>{["Canal", ...WEEKLY.map(w => w.week), "Total", "WoW"].map(h => <th key={h} style={{ padding:"8px 10px", borderBottom:"1px solid #22283a", color:"#6b7280", textAlign:h==="Canal"?"left":"right", fontSize:11 }}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {[
-                    { name:"Total", d:RAW.gmvTotal, wow:"+17,6%", up:true },
-                    { name:"Automático", d:RAW.gmvAuto, wow:"+13,9%", up:true },
-                    { name:"App", d:RAW.gmvApp, wow:"+19,5%", up:true },
-                    { name:"Site", d:RAW.gmvSite, wow:"+7,3%", up:true },
-                    { name:"GuideShops", d:RAW.gmvGS, wow:"+23,6%", up:true },
-                    { name:"TDV", d:RAW.gmvTDV, wow:"+25,8%", up:true },
-                    { name:"Avulso", d:RAW.gmvAvulso, wow:"-18,0%", up:false },
-                  ].map((row,i) => (
-                    <tr key={i}>
-                      <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", fontWeight:i===0?700:400 }}>{row.name}</td>
-                      {row.d.map((v,j) => <td key={j} style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right", color:"#9ca3af" }}>{v.toLocaleString("pt-BR")}</td>)}
-                      <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right" }}>{row.d.reduce((a,b)=>a+b,0).toLocaleString("pt-BR")}</td>
-                      <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right" }}><span style={{ background:row.up?"rgba(0,229,160,0.12)":"rgba(255,107,74,0.12)", color:row.up?C.green:C.orange, padding:"2px 7px", borderRadius:100, fontSize:11 }}>{row.wow}</span></td>
-                    </tr>
-                  ))}
+                    { name:"Total",      key:"GMV Total",   d:RAW_W.gmvTotal },
+                    { name:"Automático", key:"Automático",  d:RAW_W.gmvAuto },
+                    { name:"App",        key:"App",         d:RAW_W.gmvApp },
+                    { name:"Site",       key:"Site",        d:RAW_W.gmvSite },
+                    { name:"GuideShops", key:"GuideShops",  d:RAW_W.gmvGS },
+                    { name:"TDV",        key:"TDV",         d:RAW_W.gmvTDV },
+                    { name:"Avulso",     key:"Avulso",      d:RAW_W.gmvAvulso },
+                  ].map((row,i) => {
+                    const pct = wowPctW(row.key);
+                    const up = pct != null ? pct >= 0 : true;
+                    const wowLabel = pct != null ? `${up ? "+" : ""}${pct.toFixed(1)}%` : "—";
+                    return (
+                      <tr key={i}>
+                        <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", fontWeight:i===0?700:400 }}>{row.name}</td>
+                        {row.d.map((v,j) => <td key={j} style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right", color:"#9ca3af" }}>{Math.round(v).toLocaleString("pt-BR")}</td>)}
+                        <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right" }}>{Math.round(row.d.reduce((a,b)=>a+b,0)).toLocaleString("pt-BR")}</td>
+                        <td style={{ padding:"9px 10px", borderBottom:"1px solid #0f1219", textAlign:"right" }}><span style={{ background:up?"rgba(0,229,160,0.12)":"rgba(255,107,74,0.12)", color:up?C.green:C.orange, padding:"2px 7px", borderRadius:100, fontSize:11 }}>{wowLabel}</span></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -260,13 +329,13 @@ export default function App() {
         {/* CONVERSÃO & AOV */}
         <div style={s("conversao")}>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-            <KpiCard label="Conversão S9" value="23,6%" pill="▲ recorde do período" pillUp color="green" />
-            <KpiCard label="AOV Total S10" value="R$240" pill="▼ vs R$278 pico" pillUp={false} color="blue" />
-            <KpiCard label="AOV TDV S10" value="R$264" sub="maior ticket" color="yellow" />
-            <KpiCard label="AOV Avulso S10" value="R$236" pill="▲ vs R$223 S1" pillUp color="orange" />
+            <KpiCard label={`Conversão ${lastWeekLabel}`} value={fmtPct(lastW["Conversão %"])} pill={wowStrW("Conversão %")} pillUp={wowUpW("Conversão %")} color="green" />
+            <KpiCard label={`AOV Total ${lastWeekLabel}`} value={fmtR(lastW["AOV"])}            pill={wowStrW("AOV")}          pillUp={wowUpW("AOV")}          color="blue" />
+            <KpiCard label={`AOV TDV ${lastWeekLabel}`}   value={fmtR(lastW["AOV TDV"])}        pill={wowStrW("AOV TDV")}      pillUp={wowUpW("AOV TDV")}      color="yellow" />
+            <KpiCard label={`AOV GS ${lastWeekLabel}`}    value={fmtR(lastW["AOV GS"])}          pill={wowStrW("AOV GS")}       pillUp={wowUpW("AOV GS")}       color="orange" />
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
-            <Card title="Taxa de Conversão Geral" subtitle="% Bundle · S1–S9">
+            <Card title="Taxa de Conversão Geral" subtitle={`% Bundle · ${firstWeekLabel}–${lastWeekLabel}`}>
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={WEEKLY}>
                   <defs><linearGradient id="gConv" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.green} stopOpacity={0.2}/><stop offset="95%" stopColor={C.green} stopOpacity={0}/></linearGradient></defs>
@@ -288,7 +357,7 @@ export default function App() {
               </ResponsiveContainer>
             </Card>
           </div>
-          <Card title="Evolução AOV por Canal" subtitle="R$ — Semanas 1–9">
+          <Card title="Evolução AOV por Canal" subtitle={`R$ — ${firstWeekLabel}–${lastWeekLabel}`}>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={WEEKLY}>
                 <XAxis dataKey="week" tick={{ fill:"#6b7280", fontSize:11 }} axisLine={false} tickLine={false} />
@@ -305,10 +374,10 @@ export default function App() {
         {/* SESSÕES */}
         <div style={s("sessoes")}>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))", gap:14, marginBottom:28 }}>
-            <KpiCard label="Sessões App S10" value="1,85M" pill="▲ 248% vs 2025" pillUp color="green" />
-            <KpiCard label="Sessões Site S10" value="3,12M" pill="▲ 257% vs 2025" pillUp color="blue" />
-            <KpiCard label="Total S10" value="4,97M" pill="▲ 253% vs 2025" pillUp color="yellow" />
-            <KpiCard label="Split App/Site" value="39/61" sub="% de sessões" color="orange" />
+            <KpiCard label={`Sessões App ${lastWeekLabel}`}  value={lastW["App Sess"]  ? `${lastW["App Sess"].toFixed(2)}M`  : "—"} pill={wowStrW("App Sess")}  pillUp={wowUpW("App Sess")}  color="green" />
+            <KpiCard label={`Sessões Site ${lastWeekLabel}`} value={lastW["Site Sess"] ? `${lastW["Site Sess"].toFixed(2)}M` : "—"} pill={wowStrW("Site Sess")} pillUp={wowUpW("Site Sess")} color="blue" />
+            <KpiCard label={`Total ${lastWeekLabel}`} value={lastW["App Sess"] && lastW["Site Sess"] ? `${(lastW["App Sess"] + lastW["Site Sess"]).toFixed(2)}M` : "—"} pill={wowStrW("App Sess")} pillUp={wowUpW("App Sess")} color="yellow" />
+            <KpiCard label="Split App/Site" value={lastW["App Sess"] && lastW["Site Sess"] ? `${Math.round(lastW["App Sess"]/(lastW["App Sess"]+lastW["Site Sess"])*100)}/${Math.round(lastW["Site Sess"]/(lastW["App Sess"]+lastW["Site Sess"])*100)}` : "—"} sub="% de sessões" color="orange" />
           </div>
           <Card title="Sessões App vs Site por Semana" subtitle="Milhões">
             <ResponsiveContainer width="100%" height={250}>
