@@ -56,12 +56,23 @@ export default async function handler(req, res) {
       r.map((v) => (v == null ? "" : String(v).trim()))
     );
 
-    // Encontra linha de cabeçalho com formato WW/YYYY (ex: "10/2026")
+    // Encontra linha de cabeçalho: deve ter "Indicador" na col A E semanas WW/YYYY em outras colunas
     let headerIdx = -1;
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i].some((c) => /^\d{1,2}\/\d{4}$/.test(c))) {
+      const hasIndicador = rows[i][0]?.trim() === "Indicador";
+      const hasWeek = rows[i].some((c) => /^\d{1,2}\/\d{4}$/.test(c));
+      if (hasIndicador && hasWeek) {
         headerIdx = i;
         break;
+      }
+    }
+    // Fallback: encontra só pela coluna A = "Indicador"
+    if (headerIdx === -1) {
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i][0]?.trim() === "Indicador") {
+          headerIdx = i;
+          break;
+        }
       }
     }
 
@@ -78,10 +89,11 @@ export default async function handler(req, res) {
     });
 
     // Constrói métricas a partir das linhas de dados
+    const SKIP_LABELS = new Set(["Indicador", "Ref", ""]);
     const metrics = {};
     for (const row of rows.slice(headerIdx + 1)) {
       const label = row[0]?.trim();
-      if (!label) continue;
+      if (!label || SKIP_LABELS.has(label)) continue;
       metrics[label] = weekCols.map(({ col }) => ({
         value: parseNum(row[col]),
       }));
