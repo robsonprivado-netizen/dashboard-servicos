@@ -104,10 +104,22 @@ export default async function handler(req, res) {
       }));
     }
 
-    return res.status(200).json({
+    const response = {
       weeks: weekCols.map((w) => w.week),
       metrics,
-    });
+    };
+
+    if (req.query?.debug === "1") {
+      response._debug = {
+        totalRows: rows.length,
+        headerIdx,
+        headerRow: rows[headerIdx] ?? null,
+        weekColsFound: weekCols.map(w => ({ col: w.col, week: w.week })),
+        first5DataRows: rows.slice(headerIdx + 1, headerIdx + 6).map(r => ({ label: r[0], weekValues: weekCols.map(({ col }) => r[col]) })),
+      };
+    }
+
+    return res.status(200).json(response);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
